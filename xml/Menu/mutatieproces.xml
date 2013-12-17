@@ -6,9 +6,9 @@
     <page_callback>CRM_Contact_Form_Task_HOVOpzeggen</page_callback>
   </item>
   <item>
-    <path>civicrm/laadvge</path>
-    <page_callback>_Page_Laadvge</page_callback>
-    <title>Laadvge</title>
+    <path>civicrm/hovladen</path>
+    <page_callback>CRM_Mutatieproces_Page_Hovladen</page_callback>
+    <title>Hovladen</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
 </menu>
