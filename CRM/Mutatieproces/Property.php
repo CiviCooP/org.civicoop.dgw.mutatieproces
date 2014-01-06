@@ -9,7 +9,7 @@
  * Copyright (C) 2014 Coöperatieve CiviCooP U.A.
  * Licensed to De Goede Woning under the Academic Free License version 3.0.
  */
-class Property {
+class CRM_Mutatieproces_Property {
     private $_table = "";
     private $_type_table = "";
     public $id = 0;
@@ -73,6 +73,64 @@ class Property {
                 $this->id = $dao_latest->max_id;
             }
         }        
+    }
+    /**
+     * function to update a property
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 6 Jan 2014
+     * @param array $params Array with parameters for field values (expecting field names as elements)
+     * @return $property object with data of created or updated property
+     */
+    function update($params) {
+        /*
+         * required parameters are id, vge_id, vge_street, vge_street_number and vge_city
+         */
+        $required_params = array("id", "vge_id", "vge_street_name", "vge_street_number", "vge_city");
+        foreach ($required_params as $required_param) {
+            if (!isset($params[$required_param])) {
+                throw new Exception("Required parameter ".$required_param." not found in parameter array.");
+            }
+        }
+        /*
+         * id has to be integer
+         */
+        if (empty($params['id']) || !is_integer($params['id'])) {
+            throw new Exception("Id can not be empty and has to be an integer");
+        }
+        $this->id = $params['id'];
+
+        $query_fields = $this->_setPropertyFields($params);
+        if (!empty($query_fields)) {
+            $query = "UPDATE ".$this->_table." SET ".implode(", ", $query_fields)." WHERE id = {$this->id}";
+            CRM_Core_DAO::executeQuery($query);
+        }
+    }
+    /**
+     * static function to retrieve property with vge_id
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 6 Jan 2014
+     * @param integer $vge_id
+     * @return array $result
+     */
+    static function getByVgeId($vge_id) {
+        $result = array();
+        
+        if (empty($vge_id) || !is_integer($vge_id)) {
+            $result['is_error'] = 1;
+            $result['error_message'] = "Vge_id empty or not an integer";
+            return $result;
+        }
+        
+        $query = "SELECT * FROM civicrm_property WHERE vge_id = $vge_id";
+        $dao_property = CRM_Core_DAO::executeQuery($query);
+        if ($dao_property->fetch()) {
+            $result = self::_propertyToArray($dao_property);
+        } else {
+            $result['count'] = 0;
+        }
+        return $result;
     }
     /**
      * function to set fields based on incoming params
@@ -317,6 +375,24 @@ class Property {
         } else {
             return TRUE;
         }
+    }
+    /**
+     * private function to store dao property into array
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 6 Jan 2014
+     * @param object $property
+     * @return array $result
+     */
+    static function _propertyToArray($property) {
+        $result = array();
+        $property_fields = get_object_vars($property);
+        foreach ($property_fields as $field_name => $field_value) {
+            if (substr($field_name, 0, 1) != "_" && $field_name != "N") {
+                $result[$field_name] = $field_value;
+            }
+        }
+        return $result;
     }
 }
 
