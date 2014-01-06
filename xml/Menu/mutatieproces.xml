@@ -11,4 +11,16 @@
     <title>Hovladen</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/hovcomplete</path>
+    <page_callback>CRM_Mutatieproces_Page_Hovcomplete</page_callback>
+    <title>Hovcomplete</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/proptest</path>
+    <page_callback>CRM_Mutatieproces_Page_Proptest</page_callback>
+    <title>Proptest</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

@@ -1,5 +1,6 @@
 <?php
 require_once 'mutatieproces.civix.php';
+
 /**
  * Implementation of hook_civicrm_config
  */
@@ -18,13 +19,19 @@ function mutatieproces_civicrm_xmlMenu(&$files) {
  * Implementation of hook_civicrm_install
  */
 function mutatieproces_civicrm_install() {
-  return _mutatieproces_civix_civicrm_install();
+    return _mutatieproces_civix_civicrm_install();
 }
 /**
  * Implementation of hook_civicrm_uninstall
  */
 function mutatieproces_civicrm_uninstall() {
-  return _mutatieproces_civix_civicrm_uninstall();
+    /*
+     * remove custom groups for extension
+     */
+    _mutatieproces_delete_custom_group('huur_opzegging');
+    _mutatieproces_delete_custom_group('vge');
+    _mutatieproces_delete_custom_group('woningwaardering');
+    return _mutatieproces_civix_civicrm_uninstall();
 }
 /**
  * Implementation of hook_civicrm_enable
@@ -56,7 +63,7 @@ function mutatieproces_civicrm_enable() {
         }
         $gid = _mutatieproces_add_custom_group('vge', 'VGE gegevens', $dossier, 'Case');
         if ($gid) {
-            _mutatieproces_add_custom_field($gid, 'vge_nr', 'VGE nummer First', 'Sting', 'Text', '1', '1');
+            _mutatieproces_add_custom_field($gid, 'vge_nr', 'VGE nummer First', 'String', 'Text', '1', '1');
             _mutatieproces_add_custom_field($gid, 'complex_nr', 'Complexnummer First', 'String', 'Text', '1', '2');
             _mutatieproces_add_custom_field($gid, 'vge_adres', 'VGE adres', 'String', 'Text', '1', '3');
             _mutatieproces_add_custom_field($gid, 'vge_straat', 'Straat', 'String', 'Text', '0', '4');
@@ -84,13 +91,6 @@ function mutatieproces_civicrm_enable() {
  * Implementation of hook_civicrm_disable
  */
 function mutatieproces_civicrm_disable() {
-    /*
-     * remove custom groups for extension
-     */
-    _mutatieproces_delete_custom_group('huur_opzegging');
-    _mutatieproces_delete_custom_group('vge');
-    _mutatieproces_delete_custom_group('woningwaardering');
-
     return _mutatieproces_civix_civicrm_disable();
 }
 
@@ -116,7 +116,45 @@ function mutatieproces_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 function mutatieproces_civicrm_managed(&$entities) {
   return _mutatieproces_civix_civicrm_managed($entities);
 }
-
+/**
+ * Implementation of hook civicrm_navigationMenu
+ * to create menu items
+ * 
+ * @author Erik Hommel (erik.hommel@civicoop.org http://www.civicoop.org)
+ * @date 6 Jan 2014
+ * @param array $params
+ */
+function mutatieproces_civicrm_navigationMenu( &$params ) {
+    $maxKey = ( max( array_keys($params) ) );
+    $params[$maxKey+1] = array (
+        'attributes' => array (
+            'label'      => 'Testen Erik',
+            'name'       => 'Testen Erik',
+            'url'        => null,
+            'permission' => null,
+            'operator'   => null,
+            'separator'  => null,
+            'parentID'   => null,
+            'navID'      => $maxKey+1,
+            'active'     => 1
+    ),
+        'child' =>  array (
+            '1' => array (
+                'attributes' => array (
+                    'label'      => 'Testen Property class',
+                    'name'       => 'Testen Property class',
+                    'url'        => 'civicrm/proptest',
+                    'operator'   => null,
+                    'separator'  => 1,
+                    'parentID'   => $maxKey+1,
+                    'navID'      => 1,
+                    'active'     => 1
+                ),
+                'child' => null
+            ) 
+        ) 
+    );
+}
 function _mutatieproces_add_activity_type($type, $description) {
 	$componentCase = 7; //activity type for civi case
 	$param = array(
