@@ -48,7 +48,6 @@ class CRM_Mutatieproces_Property {
      * @author Erik Hommel (erik.hommel@civicoop.org)
      * @date 6 Jan 2014
      * @param array $params Array with parameters for field values (expecting field names as elements)
-     * @return $property object with data of created or updated property
      */
     function create($params) {
         /*
@@ -390,6 +389,228 @@ class CRM_Mutatieproces_Property {
         foreach ($property_fields as $field_name => $field_value) {
             if (substr($field_name, 0, 1) != "_" && $field_name != "N") {
                 $result[$field_name] = $field_value;
+            }
+        }
+        return $result;
+    }
+    /**
+     * Function to store property data in custom fields for
+     * all cases huuropzegging en mutatie
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 9 Jan 2014
+     * @param array $params
+     * @return array $result (is_error, can be 1 or 0 and optional error_message)
+     */
+    public function setHuuropzeggingCustomFields() {
+        $result = array();
+        /*
+         * vge_id is required
+         */
+        if (empty($this->vge_id)) {
+            $result['is_error'] = 1;
+            $result['error_message'] = " vge_id is empty";
+            return $result;
+        }
+        /*
+         * retrieve CaseType id for Huuropzegging
+         */
+        try {
+            $case_type_api = civicrm_api3('OptionValue', 'Get', array('option_group_id' => 26));
+            if (isset($case_type_api['values'])) {
+                foreach($case_type_api as $case_type) {
+                    if ($case_type['name'] == "Dossier Huuropzegging") {
+                        $case_type_id = $case_type['value'];
+                    }
+                }
+                if (!$case_type_id || empty($case_type_id)) {
+                    $result['is_error'] = 1;
+                    $result['error message'] = "No case type Dossier Huuropzegging found";
+                    return $result;
+                }
+            }
+        } catch (CiviCRM_API3_Exception $e) {
+            $result['is_error'] = 1;
+            $result['error_message'] = "Error retrieving case_type_id for Dossier 
+                Huuropzegging with OptionValue API. Error returned from API : ".$e->getMessage();
+            return $result;
+        }
+        /*
+         * retrieve custom group vge that extends case for found case type
+         */
+        $api_params = array(
+            'name'                          =>  "vge",
+            'extends'                       =>  "Case",
+            'extends_entity_column_value'   =>  $case_type_id
+        );
+        try {
+            $custom_group_api = civicrm_api3('CustomGroup', 'Getsingle', $api_params);
+            if (isset($custom_group_api['id'])) {
+                $custom_group_id = $custom_group_api['id'];
+            } else {
+                $result['is_error'] = 1;
+                $result['error_message'] = "No custom group vge found";
+                return $result;
+            }
+            if (isset($custom_group_api['table_name'])) {
+                $custom_group_table = $custom_group_api['table_name'];
+            } else {
+                $result['is_error'] = 1;
+                $result['error_message'] = "No custom group table name found";
+                return $result;
+            }
+        } catch (CiviCRM_API3_Exception $e) {
+            $result['is_error'] = 1;
+            $result['error_message'] = "Error retrieving custom_group_id for vge with CustomGroup API. 
+                Error returned from API : ".$e->getMessage();
+            return $result;
+        }
+        /*
+         * read records in custom group where entity_id = vge_id
+         */
+        $custom_query = "SELECT * FROM $custom_group_table WHERE entity_id = {$this->vge_id}";
+        $dao_vge = CRM_Core_DAO::executeQuery($custom_query);
+        while ($dao_vge->fetch()) {
+            /*
+             * add every custom field to array
+             */
+            $update_fields = array();
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("complex_id", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $complex_id = CRM_Core_DAO::escapeString($this->complex_id);
+                $update_fields[] = $custom_field['column_name']." = '$complex_id'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_straat", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $vge_straat = CRM_Core_DAO::escapeString($this->vge_street_name);
+                $update_fields[] = $custom_field['column_name']." = '$vge_straat'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_huis_nr", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $update_fields[] = $custom_field['column_name']." = '".$this->vge_street_number."'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_suffix", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $vge_suffix = CRM_Core_DAO::escapeString($this->vge_street_unit);
+                $update_fields[] = $custom_field['column_name']." = '$vge_suffix'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_adres", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $vge_adres = CRM_Core_DAO::escapeString($this->_formatVgeAdres());
+                $update_fields[] = $custom_field['column_name']." = '$vge_adres'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_postcode", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $vge_postcode = CRM_Core_DAO::escapeString($this->vge_postal_code);
+                $update_fields[] = $custom_field['column_name']." = '$vge_postcode'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_plaats", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $vge_plaats = CRM_Core_DAO::escapeString($this->vge_city);
+                $update_fields[] = $custom_field['column_name']." = '$vge_plaats'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_nr", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $update_fields[] = $custom_field['column_name']." = '".$this->vge_id."'";
+            }
+            /*
+             * if elements in update_fields then update record
+             */
+            if (!empty($update_fields)) {
+                $update_query = "UPDATE $custom_group_table SET ".implode(", ".$update_fields)." WHERE id = $dao_vge->id";
+                CRM_Core_DAO::executeQuery($update_query);
+            }
+        }       
+        /*
+         * retrieve custom group woningwaardering that extends case for found case type
+         */
+        $api_params = array(
+            'name'                          =>  "woningwaardering",
+            'extends'                       =>  "Case",
+            'extends_entity_column_value'   =>  $case_type_id
+        );
+        try {
+            $custom_group_api = civicrm_api3('CustomGroup', 'Getsingle', $api_params);
+            if (isset($custom_group_api['id'])) {
+                $custom_group_id = $custom_group_api['id'];
+            } else {
+                $result['is_error'] = 1;
+                $result['error_message'] = "No custom group woningwaardering found";
+                return $result;
+            }
+            if (isset($custom_group_api['table_name'])) {
+                $custom_group_table = $custom_group_api['table_name'];
+            } else {
+                $result['is_error'] = 1;
+                $result['error_message'] = "No custom group table name found";
+                return $result;
+            }
+        } catch (CiviCRM_API3_Exception $e) {
+            $result['is_error'] = 1;
+            $result['error_message'] = "Error retrieving custom_group_id for woningwaardering with CustomGroup API. 
+                Error returned from API : ".$e->getMessage();
+            return $result;
+        }
+        /*
+         * read records in custom group where entity_id = vge_id
+         */
+        $custom_query = "SELECT * FROM $custom_group_table WHERE entity_id = {$this->vge_id}";
+        $dao_woningwaardering = CRM_Core_DAO::executeQuery($custom_query);
+        while ($dao_woningwaardering->fetch()) {
+            /*
+             * add every custom field to array
+             */
+            $update_fields = array();
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("epa_label_opzegging", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $epa_label = CRM_Core_DAO::escapeString($this->epa_label);
+                $update_fields[] = $custom_field['column_name']." = '$epa_label'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("epa_pre_opzegging", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $epa_pre = CRM_Core_DAO::escapeString($this->epa_pre);
+                $update_fields[] = $custom_field['column_name']." = '$epa_pre'";
+            }
+            $custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("woningoppervlakte", $custom_group_id);
+            if (!civicrm_error($custom_field)) {
+                $update_fields[] = $custom_field['column_name']." = '".$this->square_mtrs."'";
+            }
+            /*
+             * if elements in update_fields then update record
+             */
+            if (!empty($update_fields)) {
+                $update_query = "UPDATE $custom_group_table SET ".implode(", ".$update_fields)." WHERE id = $dao_woningwaardering->id";
+                CRM_Core_DAO::executeQuery($update_query);
+            }
+        }       
+    }
+    /**
+     * private function to glue formatted address
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 9 Jan 2014
+     * @return string $result
+     */
+    private function _formatVgeAdres() {
+        $formatted_address = array();
+        if (!empty($this->vge_street_name)) {
+            $formatted_address[] = $this->vge_street_name;
+        }
+        if (!empty($this->vge_street_number)) {
+            $formatted_address[] = $this->vge_street_number;
+        }
+        if (!empty($this->vge_street_unit)) {
+            $formatted_address = $this->vge_street_unit;
+        }
+        $result = implode(" ", $formatted_address);
+        if (!empty($this->vge_postal_code)) {
+            $result .= ", ".$this->vge_postal_code;
+            if (!empty($this->vge_city)) {
+                $result .= " ".$this->vge_city;
+            }
+        } else {
+            if (!empty($this->vge_city)) {
+                $result .= ", ".$this->vge_city;
             }
         }
         return $result;
