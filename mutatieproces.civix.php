@@ -96,7 +96,7 @@ function _mutatieproces_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL
 }
 
 function _mutatieproces_civix_upgrader() {
-  if (!file_exists(__DIR__.'/CRM/Mutatieproces/Upgrader.php')) {
+  if (!file_exists(__DIR__.'//CRM/Mutatieproces/Upgrader.php')) {
     return NULL;
   } else {
     return CRM_Mutatieproces_Upgrader_Base::instance();

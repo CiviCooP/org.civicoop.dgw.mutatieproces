@@ -1,7 +1,7 @@
 CREATE TABLE `civicrm_property` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `vge_id` int(11) DEFAULT NULL,
-  `complex_id` int(11) DEFAULT NULL,
+  `complex_id` varchar(45) DEFAULT NULL,
   `subcomplex` varchar(45) DEFAULT NULL,
   `vge_street_name` varchar(128) DEFAULT NULL,
   `vge_street_number` int(11) DEFAULT NULL,

@@ -23,4 +23,16 @@
     <title>Proptest</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/vgeladen</path>
+    <page_callback>CRM_Mutatieproces_Page_Vgeladen</page_callback>
+    <title>Vgeladen</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/vgecomplete</path>
+    <page_callback>CRM_Mutatieproces_Page_Vgecomplete</page_callback>
+    <title>Vgecomplete</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

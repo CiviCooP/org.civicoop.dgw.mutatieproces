@@ -3,7 +3,7 @@
 /**
  * Collection of upgrade steps
  */
-class _Upgrader extends _Upgrader_Base {
+class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     public function install() {
         /**
          * create tables for civicrm_property (VGE), civicrm_property_type and civicrm_property_contract (HOV)

@@ -145,8 +145,36 @@ function mutatieproces_civicrm_navigationMenu( &$params ) {
                     'name'       => 'Testen Property class',
                     'url'        => 'civicrm/proptest',
                     'operator'   => null,
-                    'separator'  => 1,
+                    'separator'  => 0,
                     'parentID'   => $maxKey+1,
+                    'navID'      => 1,
+                    'active'     => 1
+                ),
+                'child' => null
+            ) 
+        ) 
+    );
+    $params[$maxKey+2] = array (
+        'attributes' => array (
+            'label'      => 'Laden gegevens vanuit First',
+            'name'       => 'Laden gegevens vanuit First',
+            'url'        => null,
+            'permission' => null,
+            'operator'   => null,
+            'separator'  => null,
+            'parentID'   => null,
+            'navID'      => $maxKey+2,
+            'active'     => 1
+    ),
+        'child' =>  array (
+            '1' => array (
+                'attributes' => array (
+                    'label'      => 'Laden vge gegevens',
+                    'name'       => 'Laden vge gegevens',
+                    'url'        => 'civicrm/vgeladen',
+                    'operator'   => null,
+                    'separator'  => 0,
+                    'parentID'   => $maxKey+2,
                     'navID'      => 1,
                     'active'     => 1
                 ),
