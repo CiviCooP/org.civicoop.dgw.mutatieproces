@@ -41,10 +41,14 @@ class CRM_Mutatieproces_Page_Vgecomplete extends CRM_Core_Page {
                 /*
                  * update all custom fields with latest property values
                  */
-                $property->setHuuropzeggingCustomFields();
+                $result_custom_fields = $property->setHuuropzeggingCustomFields();
+                if ($property->vge_id == 7406) {
+                    CRM_Core_Error::debug('result', $result_custom_fields);
+                }
             }
         }
         fclose($sf);
+        $this->assign('homeCiviUrl', CRM_Utils_System::url('civicrm', null, true));        
         parent::run();
     }
 }
