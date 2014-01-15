@@ -33,8 +33,9 @@ class CRM_Mutatieproces_Property {
     public $strategy_c_pnts = 0;
     public $number_rooms = 0;
     public $outside_code = "";
+    public $build_year = 0;
     public $stairs = 0;
-    public $square_mtrs = 0;
+    public $square_mtrs = "";
     /**
      * constructor
      */
@@ -50,19 +51,10 @@ class CRM_Mutatieproces_Property {
      * @param array $params Array with parameters for field values (expecting field names as elements)
      */
     function create($params) {
-        /*
-         * required parameters are vge_id, vge_street, vge_street_number and vge_city
-         */
-        $required_params = array("vge_id", "vge_street_name", "vge_street_number", "vge_city");
-        foreach ($required_params as $required_param) {
-            if (!isset($params[$required_param])) {
-                throw new Exception("Required parameter ".$required_param." not found in parameter array.");
-            }
-        }
-
         $query_fields = $this->_setPropertyFields($params);
         if (!empty($query_fields)) {
             $query = "INSERT INTO ".$this->_table." SET ".implode(", ", $query_fields);
+            CRM_Core_Error::debug("query insert prop", $query);
             CRM_Core_DAO::executeQuery($query);
         }
         $latest_query = "SELECT MAX(id) AS max_id FROM ".$this->_table;
@@ -81,24 +73,7 @@ class CRM_Mutatieproces_Property {
      * @param array $params Array with parameters for field values (expecting field names as elements)
      * @return $property object with data of created or updated property
      */
-    function update($params) {
-        /*
-         * required parameters are id, vge_id, vge_street, vge_street_number and vge_city
-         */
-        $required_params = array("id", "vge_id", "vge_street_name", "vge_street_number", "vge_city");
-        foreach ($required_params as $required_param) {
-            if (!isset($params[$required_param])) {
-                throw new Exception("Required parameter ".$required_param." not found in parameter array.");
-            }
-        }
-        /*
-         * id has to be integer
-         */
-        if (empty($params['id']) || !is_integer($params['id'])) {
-            throw new Exception("Id can not be empty and has to be an integer");
-        }
-        $this->id = $params['id'];
-
+    public function update($params) {
         $query_fields = $this->_setPropertyFields($params);
         if (!empty($query_fields)) {
             $query = "UPDATE ".$this->_table." SET ".implode(", ", $query_fields)." WHERE id = {$this->id}";
@@ -113,10 +88,10 @@ class CRM_Mutatieproces_Property {
      * @param integer $vge_id
      * @return array $result
      */
-    static function getByVgeId($vge_id) {
+    public static function getByVgeId($vge_id) {
         $result = array();
-        
-        if (empty($vge_id) || !is_integer($vge_id)) {
+
+        if (empty($vge_id) || !is_numeric($vge_id)) {
             $result['is_error'] = 1;
             $result['error_message'] = "Vge_id empty or not an integer";
             return $result;
@@ -143,148 +118,82 @@ class CRM_Mutatieproces_Property {
     private function _setPropertyFields($params) {
         $result = array();
         
-        if (isset($params['vge_id'])) {
-            if (!is_integer($params['vge_id'])) {
-                throw new Exception("Parameter vge_id has to be numeric");
-            }
-            $this->vge_id = $params['vge_id'];
+        if (isset($params[0])) {
+            $this->vge_id = $params[0];
             $result[] = "vge_id = {$this->vge_id}";
         }
         
-        if (isset($params['complex_id'])) {
-            if (!is_integer($params['complex_id'])) {
-                throw new Exception("Parameter complex_id has to be numeric");
-            }
-            $this->complex_id = $params['complex_id'];
-            $result[] = "complex_id = {$this->complex_id}";
+        if (isset($params[1])) {
+            $this->complex_id = CRM_Core_DAO::escapeString($params[1]);
+            $result[] = "complex_id = '{$this->complex_id}'";
         }
-        
-        if (isset($params['subcomplex'])) {
-            $this->subcomplex = CRM_Core_DAO::escapeString($params['subcomplex']);
-            $result[] = "subcomplex = '{$this->subcomplex}'";
-        }
-        
-        if (isset($params['vge_street_name'])) {
-            $this->vge_street_name = CRM_Core_DAO::escapeString($params['vge_street_name']);
+              
+        if (isset($params[5])) {
+            $this->vge_street_name = CRM_Core_DAO::escapeString($params[5]);
             $result[] = "vge_street_name = '{$this->vge_street_name}'";
         }
 
-        if (isset($params['vge_street_number'])) {
-            if (!is_integer($params['vge_street_number'])) {
-                throw new Exception("Parameter vge_street_number has to be numeric");
-            }
-            $this->vge_street_number = $params['vge_street_number'];
+        if (isset($params[6])) {
+            $this->vge_street_number = $params[6];
             $result[] = "vge_street_number = {$this->vge_street_number}";
         }
         
-        if (isset($params['vge_street_unit'])) {
-            $this->vge_street_unit = CRM_Core_DAO::escapeString($params['vge_street_unit']);
+        if (isset($params[8])) {
+            $this->vge_street_unit = CRM_Core_DAO::escapeString($params[8]);
             $result[] = "vge_street_unit = '{$this->vge_street_unit}'";
         }
         
-        if (isset($params['vge_postal_code'])) {
-            $this->vge_postal_code = self::formatPostalCode($params['vge_postal_code']);
+        if (isset($params[9])) {
+            $this->vge_postal_code = self::formatPostalCode($params[9]);
             $result[] = "vge_postal_code = '{$this->vge_postal_code}'";
         }
         
-        if (isset($params['vge_city'])) {
-            $this->vge_city = CRM_Core_DAO::escapeString($params['vge_city']);
+        if (isset($params[10])) {
+            $this->vge_city = CRM_Core_DAO::escapeString($params[10]);
             $result[] = "vge_city = '{$this->vge_city}'";
         }
         
-        if (isset($params['vge_country_id'])) {
-            if (!self::validCountryId($params['vge_country_id'])) {
-                throw new Exception("Vge_country_id {$params['vge_country_id']} is not valid");
-            }
-            $this->vge_country_id = $params['vge_country_id'];
-            $result[] = "vge_country_id = {$this->vge_country_id}";
-        }
+        $this->vge_country_id = 1152;
+        $result[] = "vge_country_id = {$this->vge_country_id}";
         
-        if (isset($params['vge_address_id'])) {
-            if (!self::validAddressId($params['vge_address_id'])) {
-                throw new Exception("Vge_address_id {$params['vge_address_id']} is not valid");
-            }
-            $this->vge_address_id = $params['vge_address_id'];
-            $result[] = "vge_address_id = {$this->vge_address_id}";
-        }
-        
-        if (isset($params['epa_label'])) {
-            $this->epa_label = CRM_Core_DAO::escapeString($params['epa_label']);
+        if (isset($params[13])) {
+            $this->epa_label = CRM_Core_DAO::escapeString($params[13]);
             $result[] = "epa_label = '{$this->epa_label}'";
         }
         
-        if (isset($params['epa_pre'])) {
-            $this->epa_pre = CRM_Core_DAO::escapeString($params['epa_pre']);
+        if (isset($params[14])) {
+            $this->epa_pre = CRM_Core_DAO::escapeString($params[14]);
             $result[] = "epa_pre = '{$this->epa_pre}'";
         }
         
-        if (isset($params['city_region'])) {
-            $this->city_region = CRM_Core_DAO::escapeString($params['city_region']);
+        if (isset($params[2])) {
+            $this->city_region = CRM_Core_DAO::escapeString($params[2]);
             $result[] = "city_region = '{$this->city_region}'";
         }
         
-        if (isset($params['block'])) {
-            $this->block = CRM_Core_DAO::escapeString($params['block']);
+        if (isset($params[3])) {
+            $this->block = CRM_Core_DAO::escapeString($params[3]);
             $result[] = "block = '{$this->block}'";
         }
         
-        if (isset($params['vge_type_id'])) {
-            if (!$this->validTypeId($params['vge_type_id'])) {
-                throw new Exception("Vge_type_id {$params['vge_type_id']} is not valid");
+        if (isset($params[11]) && !empty($params[11])) {
+            $type_exists = $this->_getPropertyTypeId($params[11]);
+            if ($type_exists == FALSE) {
+                $this->_createPropertyType($params[11]);
             }
-            $this->vge_type_id = $params['vge_type_id'];
             $result[] = "vge_type_id = {$this->vge_type_id}";
         }
-
-        if(isset($params['strategy_label'])) {
-            $this->strategy_label = CRM_Core_DAO::escapeString($params['strategy_label']);
-            
-            $result[] = "strategy_label = '{$this->strategy_label}'";
+        
+        if (isset($params[4])) {
+            $this->square_mtrs = CRM_Core_DAO::escapeString($params[4]);
+            $result[] = "square_mtrs = '{$this->square_mtrs}'";
         }
         
-         if (isset($params['strategy_b_pnts'])) {
-            if (!is_integer($params['strategy_b_pnts'])) {
-                throw new Exception("Parameter strategy_b_pnts has to be numeric");
+        if (isset($params[12])) {
+            if (is_numeric($params[12])) {
+                $this->build_year = $params[12];
             }
-            $this->strategy_b_pnts = $params['strategy_b_pnts'];
-            $result[] = "strategy_b_pnts = {$this->strategy_b_pnts}";
-        }
-        
-        if (isset($params['strategy_c_pnts'])) {
-            if (!is_integer($params['strategy_c_pnts'])) {
-                throw new Exception("Parameter strategy_c_pnts has to be numeric");
-            }
-            $this->strategy_c_pnts = $params['strategy_c_pnts'];
-            $result[] = "strategy_c_pnts = {$this->strategy_c_pnts}";
-        }
-
-         if (isset($params['number_rooms'])) {
-            if (!is_integer($params['number_rooms'])) {
-                throw new Exception("Parameter number_rooms has to be numeric");
-            }
-            $this->number_rooms = $params['number_rooms'];
-            $result[] = "number_rooms = {$this->number_rooms}";
-        }
-
-        if (isset($params['outside_code'])) {
-            $this->outside_code = CRM_Core_DAO::escapeString($params['outside_code']);
-            $result[] = "outside_code = '{$this->outside_code}'";
-        }
-        
-        if (isset($params['stairs'])) {
-            if ($params['stairs'] != 0 && $params['stairs'] != 1) {
-                throw new Exception("Parameter stairs can only be 0 or 1");
-            }
-            $this->stairs = $params['stairs'];
-            $result[] = "stairs = '{$this->stairs}'";
-        }
-        
-        if (isset($params['square_mtrs'])) {
-            if (!is_numeric($params['square_mtrs'])) {
-                throw new Exception("Parameter square_mtrs has to be numeric");
-            }
-            $this->square_mtrs = $params['square_mtrs'];
-            $result[] = "square_mtrs = {$this->square_mtrs}";
+            $result[] = "build_year = {$this->build_year}";
         }
        
         return $result;
@@ -297,8 +206,19 @@ class CRM_Mutatieproces_Property {
      * @param string $postal_code
      * @return string $formatted_postal_code
      */
-    static function formatPostalCode($postal_code) {
+    public static function formatPostalCode($postal_code) {
         $formatted_postal_code = $postal_code;
+        /*
+         * only format if length incoming string is 6
+         * and pattern is 1234AA
+         */
+        if (!empty($postal_code) && strlen($postal_code == 6)) {
+            if (is_numeric(substr($postal_code, 0, 4))) {
+                if (is_string(substr($postal_code, 4, 2))) {
+                    $formatted_postal_code = substr($postal_code, 0, 4)." ".substr($postal_code, 4, 2);
+                }
+            }
+        }
         return $formatted_postal_code;
     }
     /**
@@ -309,7 +229,7 @@ class CRM_Mutatieproces_Property {
      * @param type $address_id
      * @return boolean true or false
      */
-    static function validAddressId($address_id) {
+    public static function validAddressId($address_id) {
         if (!is_integer($address_id)) {
             return FALSE;
         }
@@ -333,7 +253,7 @@ class CRM_Mutatieproces_Property {
      * @param type $country_id
      * @return boolean true or false
      */
-    static function validCountryId($country_id) {
+    public static function validCountryId($country_id) {
         if (!is_integer($country_id)) {
             return FALSE;
         }
@@ -350,30 +270,23 @@ class CRM_Mutatieproces_Property {
         }
     }
     /**
-     * static function to check if the vge_type_id exists
+     * static function to set the vge_type_id based on name
      * 
      * @author Erik Hommel (erik.hommel@civicoop.org
-     * @date 6 Jan 2014
-     * @param type $vge_type_id
-     * @return boolean true or false
+     * @date 15 Jan 2014
+     * @param string $vge_type
+     * @return boolean TRUE/FALSE
      */
-    private function validTypeId($vge_type_id) {
-        if (!is_integer($vge_type_id)) {
+    private function _getPropertyTypeId($vge_type) {
+        if (empty($vge_type)) {
             return FALSE;
         }
-        $count_query = "SELECT COUNT(*) AS type_count FROM ".$this->_type_table." WHERE id = $vge_type_id";
-        $count_type = 0;
-        $dao_type = CRM_Core_DAO::executeQuery($count_query);
-        if ($dao_type->fetch()) {
-            if (isset($dao_type->type_count)) {
-                $count_type = $dao_type->type_count;
-            }
+        $query = "SELECT id FROM ".$this->_type_table." WHERE label = '$vge_type'";
+        $dao = CRM_Core_DAO::executeQuery($query);
+        if ($dao->fetch()) {
+            $this->vge_type_id = $dao->id;
         }
-        if ($count_type == 0) {
-            return FALSE;
-        } else {
-            return TRUE;
-        }
+        return TRUE;
     }
     /**
      * private function to store dao property into array
@@ -383,7 +296,7 @@ class CRM_Mutatieproces_Property {
      * @param object $property
      * @return array $result
      */
-    static function _propertyToArray($property) {
+    private static function _propertyToArray($property) {
         $result = array();
         $property_fields = get_object_vars($property);
         foreach ($property_fields as $field_name => $field_value) {
@@ -615,6 +528,62 @@ class CRM_Mutatieproces_Property {
         }
         return $result;
     }
+    /**
+     * private function to create a property type
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 15 Jan 2014
+     * 
+     * @param string $vge_type
+     * @return boolean TRUE/FALSE
+     */
+    private function _createPropertyType($vge_type) {
+        if (empty($vge_type)) {
+            return FALSE;
+        }
+        $query = "INSERT INTO ".$this->_type_table." SET label = '$vge_type'";
+        CRM_Core_DAO::executeQuery($query);
+        $latest_query = "SELECT MAX(id) AS max_id FROM ".$this->_type_table;        
+        $dao_latest = CRM_Core_DAO::executeQuery($latest_query);
+        if ($dao_latest->fetch()) {
+            if (isset($dao_latest->max_id)) {
+                $this->_vge_type_id = $dao_latest->max_id;
+            }
+        }
+        return TRUE;
+    }
+    /**
+     * public function to check if there is a property with the vge_id
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 15 Jan 2014
+     * @param integer $vge_id
+     * @return TRUE or FALSE
+     */
+    public function checkVgeIdExists($vge_id) {
+        if (empty($vge_id) || !is_numeric($vge_id)) {
+            return FALSE;
+        }
+        $query = "SELECT COUNT(*), id AS count_property FROM ".$this->_table." WHERE vge_id = $vge_id";
+        $dao = CRM_Core_DAO::executeQuery($query);
+        if ($dao->fetch()) {
+            if ($dao->count_property > 0) {
+                return TRUE;
+            } else {
+                return FALSE;
+            }
+        }
+    }
+    /**
+     * public function to set the id of the property based on vge_id
+     * @param integer $vge_id
+     */
+    public function setIdWithVgeId($vge_id) {
+        if (!empty($vge_id) && is_numeric($vge_id)) {
+            $query = "SELECT id FROM ".$this->_table." WHERE vge_id = $vge_id";
+            $dao = CRM_Core_DAO::executeQuery($query);
+            if ($dao->fetch()) {
+                $this->id = $dao->id;
+            }
+        }
+    }
 }
-
-?>

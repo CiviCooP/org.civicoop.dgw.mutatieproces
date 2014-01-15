@@ -21,7 +21,8 @@ CREATE TABLE `civicrm_property` (
   `number_rooms` int(11) DEFAULT NULL,
   `outside_code` varchar(45) DEFAULT NULL,
   `stairs` tinyint(4) DEFAULT NULL,
-  `square_mtrs` decimal(7,2) DEFAULT NULL,
+  `build_year` tinyint(4) DEFAULT NULL,
+  `square_mtrs` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `vge_id` (`vge_id`)

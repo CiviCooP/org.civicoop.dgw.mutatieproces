@@ -13,7 +13,7 @@ require_once 'CRM/Core/Page.php';
 class CRM_Mutatieproces_Page_Vgeladen extends CRM_Core_Page {
     function run() {
         CRM_Utils_System::setTitle('Laden eenheden uit First Noa');
-        $this->assign('loadVgeFile', 'CRM/Mutatieproces/Page/Vgecomplete.php');
+        $this->assign('loadVgeFile', CRM_Utils_System::url('civicrm/vgecomplete', null, true));
         parent::run();
     }
 }

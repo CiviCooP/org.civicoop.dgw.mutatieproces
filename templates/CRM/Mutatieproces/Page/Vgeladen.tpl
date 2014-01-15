@@ -9,3 +9,4 @@
         <input type='submit' class='form-submit' name='submit_load_vge' value='Laden starten'>   
     </div>
 </form>
+    <h3>Let op! Het laden van eenheden duurt wel even....</h3>
