@@ -268,9 +268,7 @@ function _mutatieproces_add_custom_field($gid, $name, $label, $data_type, $html_
 	$params['version']  = 3;
 	$params['custom_group_id'] = $gid;
 	$params['label'] = $label;
-        CRM_Core_Error::debug("params waarmee custom field aangemaakt wordt", $params);
 	$result = civicrm_api('CustomField', 'getsingle', $params);
-        CRM_Core_Error::debug("resultaat van custom field create", $result);
 	if (!isset($result['id'])) {
 		unset($params);
 		$params['version']  = 3;
@@ -405,3 +403,68 @@ function _mutatieproces_get_case_type_id($case) {
 
 	return $option_value_value;
 }
+/**
+ * Implementation of hook civicrm_custom 
+ * If record is changed or created in custom group
+ * huuirovereenkomst(huishouden) or huurovereenkomst (organisatie)\
+ * then updated or add to table PropertyContract
+ * 
+ * @param string $op
+ * @param integer $groupID
+ * @param integer $entityID
+ * @param array $params
+ */
+function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
+    /*
+     * retrieve custom_group_id for huurovereenkomst (huishouden) en
+     * huurovereenkomst (organisatie), and retrieve hov_nummer field label
+     */
+    $hov_hh_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (huishouden");
+    if (!civicrm_error($hov_hh_custom_group)) {
+        if (isset($hov_hh_custom_group[ 'id'])) {
+            $hov_hh_custom_group_id = $hov_hh_custom_group['id'];
+            $hov_id_name = "HOV_nummer_First";
+            $hov_custom_table = $hov_hh_custom_group['table_name'];
+        }
+    }
+    $hov_org_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (organisatie");
+    if (!civicrm_error($hov_org_custom_group)) {
+        if (isset($hov_org_custom_group[ 'id'])) {
+            $hov_org_custom_group_id = $hov_org_custom_group['id'];
+            $hov_id_name = "hov_nummer";
+            $hov_custom_table = $hov_org_custom_group['table_name'];
+        }
+    }
+    
+    /*
+     * process only if required
+     */
+    if ($groupID == $hov_hh_custom_group_id || $groupID == $hov_org_custom_group_id) {
+        if ($groupID == $hov_hh_custom_group_id) {
+            $hov_id_name = "HOV_nummer_First";
+        } else {
+            $hov_id_name = "hov_nummer";
+        }
+        $hov_id_custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName($hov_id_name, $groupID);
+        if (!civicrm_error($hov_id_custom_field)) {
+            $hov_custom_field = $hov_id_custom_field['column_name'];
+        }
+        $hov_query = 'SELECT '.$hov_custom_field." FROM ".$hov_custom_table." WHERE entity_id = $entityID";
+        $dao_hov = CRM_Core_DAO::executeQuery($hov_query);
+        if ($dao_hov->fetch()) {
+            $contract_data = _mutatieproces_setPropertyContractParams($params);
+            /*
+             * update or add property contract table if required
+             */
+            require_once 'CRM/Mutatieproces/PropertyContract.php';
+            $property_contract = new CRM_Mutatieproces_PropertyContract();
+            $contract_exists = $property_contract->checkContractExists($dao_hov->$hov_custom_field);
+            if ($contract_exists) {
+                $property_contract->update($contract_data);
+            } else {
+                $property_contract->create($contract_data);
+            }
+        }
+    }
+}
+    
