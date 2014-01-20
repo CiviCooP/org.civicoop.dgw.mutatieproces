@@ -419,20 +419,20 @@ function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
      * retrieve custom_group_id for huurovereenkomst (huishouden) en
      * huurovereenkomst (organisatie), and retrieve hov_nummer field label
      */
-    $hov_hh_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (huishouden");
+    $hov_hh_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (huishouden)");
     if (!civicrm_error($hov_hh_custom_group)) {
         if (isset($hov_hh_custom_group[ 'id'])) {
             $hov_hh_custom_group_id = $hov_hh_custom_group['id'];
             $hov_id_name = "HOV_nummer_First";
-            $hov_custom_table = $hov_hh_custom_group['table_name'];
+            $hov_hh_custom_table = $hov_hh_custom_group['table_name'];
         }
     }
-    $hov_org_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (organisatie");
+    $hov_org_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("Huurovereenkomst (organisatie)");
     if (!civicrm_error($hov_org_custom_group)) {
         if (isset($hov_org_custom_group[ 'id'])) {
             $hov_org_custom_group_id = $hov_org_custom_group['id'];
             $hov_id_name = "hov_nummer";
-            $hov_custom_table = $hov_org_custom_group['table_name'];
+            $hov_org_custom_table = $hov_org_custom_group['table_name'];
         }
     }
     
@@ -442,8 +442,12 @@ function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
     if ($groupID == $hov_hh_custom_group_id || $groupID == $hov_org_custom_group_id) {
         if ($groupID == $hov_hh_custom_group_id) {
             $hov_id_name = "HOV_nummer_First";
+            $hov_custom_table = $hov_hh_custom_table;
+            $type = "Huishouden";
         } else {
             $hov_id_name = "hov_nummer";
+            $hov_custom_table = $hov_org_custom_table;
+            $type = "Organisatie";
         }
         $hov_id_custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName($hov_id_name, $groupID);
         if (!civicrm_error($hov_id_custom_field)) {
@@ -452,7 +456,7 @@ function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
         $hov_query = 'SELECT '.$hov_custom_field." FROM ".$hov_custom_table." WHERE entity_id = $entityID";
         $dao_hov = CRM_Core_DAO::executeQuery($hov_query);
         if ($dao_hov->fetch()) {
-            $contract_data = _mutatieproces_setPropertyContractParams($params);
+            $contract_data = _mutatieproces_setPropertyContractParams($params, $type);
             /*
              * update or add property contract table if required
              */
@@ -460,6 +464,8 @@ function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
             $property_contract = new CRM_Mutatieproces_PropertyContract();
             $contract_exists = $property_contract->checkContractExists($dao_hov->$hov_custom_field);
             if ($contract_exists) {
+                $retrieved_contract = CRM_Mutatieproces_PropertyContract::getPropertyContractWithHovId($dao_hov->$hov_custom_field);
+                $contract_data['id'] = $retrieved_contract['id'];
                 $property_contract->update($contract_data);
             } else {
                 $property_contract->create($contract_data);
@@ -467,4 +473,65 @@ function mutatieproces_civicrm_custom( $op, $groupID, $entityID, &$params ) {
         }
     }
 }
-    
+/**
+ * Function to set the fields for PropertyContract based on incoming $params
+ * 
+ * @author Erik Hommel (erik.hommel@civicoop.org)
+ * @date 20 Jan 2014
+ * @param arry $params
+ * @return array $result
+ * 
+ */    
+function _mutatieproces_setPropertyContractParams($params, $type) {
+    $result = array();
+    if (empty($params) || empty($type)) {
+        return $result;
+    }
+    foreach($params as $param) {
+        $custom_field = civicrm_api3('CustomField', 'Getsingle', array('id' =>$param['custom_field_id']));
+        $custom_field_name = $custom_field['name'];
+        /*
+         * set fields based on custom_group
+         */
+        switch(($type)) {
+            case "Huishouden":
+                switch($custom_field_name) {
+                    case "HOV_nummer_First":
+                        $result['hov_id'] = $param['value'];
+                        break;
+                    case "VGE_nummer_First":
+                        $result['hov_vge_id'] = $param['value'];
+                        break;
+                    case "Correspondentienaam_First":
+                        $result['hov_corr_name'] = $param['value'];
+                        break;
+                    case "Begindatum_HOV":
+                        $result['hov_start_date'] = $param['value'];
+                        break;
+                    case "Einddatum_HOV":
+                        $result['hov_end_date'] = $param['value'];
+                        break;
+                }
+                break;
+            case "Organisatie": 
+                switch($custom_field_name) {
+                    case "hov_nummer":
+                        $result['hov_id'] = $param['value'];
+                        break;
+                    case "vge_nummer":
+                        $result['hov_vge_id'] = $param['value'];
+                        break;
+                    case "naam_op_overeenkomst":
+                        $result['hov_corr_name'] = $param['value'];
+                        break;
+                    case "begindatum_overeenkomst":
+                        $result['hov_start_date'] = $param['value'];
+                        break;
+                    case "einddatum_overeenkomst":
+                        $result['hov_end_date'] = $param['value'];
+                        break;
+                }
+        }        
+    }
+    return $result;
+}
