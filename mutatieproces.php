@@ -184,224 +184,201 @@ function mutatieproces_civicrm_navigationMenu( &$params ) {
     );
 }
 function _mutatieproces_add_activity_type($type, $description) {
-	$componentCase = 7; //activity type for civi case
-	$param = array(
-		"label"=>$type,
-		"description"=> $description,
-		"component_id" => $componentCase,
-		"is_reserved"=>false,
-		"is_active"=>1,
-		"weight"=>1,
-		"version"=>3
+    $componentCase = 7; //activity type for civi case
+    $param = array(
+        'label'         =>  $type,
+        'description'   =>  $description,
+        'component_id'  =>  $componentCase,
+        'is_reserved'   =>  true,
+        'is_active'     =>  1,
+        'weight'        =>  1,
 	);
-	$result = civicrm_api('activity_type', 'create', $param);
+    civicrm_api3('ActivityType', 'Create', $param);
 }
 
 function _mutatieproces_add_relationship_type($name_a_b, $name_b_a, $contact_type_a, $contact_type_b) {
-   $params['name_a_b'] = $name_a_b;
-   $params['name_b_a'] = $name_b_a;
-   if (strlen($contact_type_a)) {
-   		$params['contact_type_a'] = $contact_type_a;
-   }
-   if (strlen($contact_type_b)) {
-   		$params['contact_type_b'] = $contact_type_b;
-   }
-   $params['version'] = 3;
-   $result = civicrm_api('relationship_type', 'get', $params);
-   if ($result['is_error'] == 1 || $result['count'] == 0) {
-		$result = civicrm_api('relationship_type', 'create', $params);
-   }
+    $params['name_a_b'] = $name_a_b;
+    $params['name_b_a'] = $name_b_a;
+    if (strlen($contact_type_a)) {
+        $params['contact_type_a'] = $contact_type_a;
+    }
+    if (strlen($contact_type_b)) {
+        $params['contact_type_b'] = $contact_type_b;
+    }
+    $result = civicrm_api('relationship_type', 'get', $params);
+    if ($result['is_error'] == 1 || $result['count'] == 0) {
+        $result = civicrm_api3('RelationshipType', 'Create', $params);
+    }
 }
 
 function _mutatieproces_add_case($case) {
-	$option_group = civicrm_api('OptionGroup', 'getsingle', array('name' => 'case_type', 'version' => '3'));
-	$option_group_id = false;
-	if (isset($option_group['id'])) {
-		$option_group_id = $option_group['id'];
-	}
-	if (!$option_group_id) {
-		return false;
-	}
+    $option_group = civicrm_api3('OptionGroup', 'Getsingle', array('name' => 'case_type'));
+    $option_group_id = false;
+    if (isset($option_group['id'])) {
+        $option_group_id = $option_group['id'];
+    }
+    if (!$option_group_id) {
+        return false;
+    }
 
-	$option_value = civicrm_api('OptionValue', 'getsingle', array('option_group_id' => $option_group_id, 'name' => $case, 'version' => '3'));
-	$option_value_id = false;
-	$option_value_value = false;
-	if (isset($option_value['id'])) {
-		$option_value_id = $option_value['id'];
-		$option_value_value = $option_value['value'];
-	}
-	if (!$option_value_id) {
-		$option_value = civicrm_api('OptionValue', 'create', array('option_group_id' => $option_group_id, 'name' => $case, 'version' => '3'));
-		if (isset($option_value['id']) && is_array($option_value['values']) && count($option_value['values'])) {
-			$v = reset($option_value['values']);
-			$option_value_id = $option_value['id'];
-			$option_value_value = $v['value'];
-		}
-	}
-
-	return $option_value_value;
+    $params = array(
+        'option_group_id'   =>  $option_group_id,
+        'name'              =>  $case        
+    );
+    $option_value = civicrm_api3('OptionValue', 'Getsingle', $params);
+    $option_value_id = false;
+    $option_value_value = false;
+    if (isset($option_value['id'])) {
+        $option_value_id = $option_value['id'];
+        $option_value_value = $option_value['value'];
+    }
+    if (!$option_value_id) {
+        $option_value = civicrm_api3('OptionValue', 'Create', $params);
+        if (isset($option_value['id']) && is_array($option_value['values']) && count($option_value['values'])) {
+            $v = reset($option_value['values']);
+            $option_value_id = $option_value['id'];
+            $option_value_value = $v['value'];
+        }
+    }
+    return $option_value_value;
 }
 
 function _mutatieproces_add_custom_group($group, $group_title, $case_id, $extends) {
-	$params['version']  = 3;
-	$params['name'] = $group;
-	$result = civicrm_api('CustomGroup', 'getsingle', $params);
-	if (!isset($result['id'])) {
-		unset($params);
-		$params['version']  = 3;
-		$params['name'] = $group;
-		$params['title'] = $group_title;
-		$params['extends'] = $extends;
-		$params['extends_entity_column_value'] = $case_id;
-		$params['is_active'] = '1';
-		$result = civicrm_api('CustomGroup', 'create', $params);
-	}
-	$gid = false;
-	if (isset($result['id'])) {
-		$gid = $result['id'];
-	}
-
-	return $gid;
+    $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
+    if (!isset($result['id'])) {
+        $params = array(
+            'name'                          =>  $group,
+            'title'                         =>  $group_title,
+            'extends'                       =>  $extends,
+            'extends_entity_column_value'   =>  $case_id,
+            'is_active'                     =>  1
+        );
+        $result = civicrm_api3('CustomGroup', 'Create', $params);
+    }
+    $gid = false;
+    if (isset($result['id'])) {
+        $gid = $result['id'];
+    }
+    return $gid;
 }
 
 function _mutatieproces_add_custom_field($gid, $name, $label, $data_type, $html_type, $active, $weight = 0) {
-	$params['version']  = 3;
-	$params['custom_group_id'] = $gid;
-	$params['label'] = $label;
-	$result = civicrm_api('CustomField', 'getsingle', $params);
-	if (!isset($result['id'])) {
-		unset($params);
-		$params['version']  = 3;
-		$params['custom_group_id'] = $gid;
-		$params['name'] = $name;
-		$params['label'] = $name;
-		$params['html_type'] = $html_type;
-		$params['data_type'] = $data_type;
-		$params['is_active'] = $active;
-		$params['weight'] = $weight;
-		$result = civicrm_api('CustomField', 'create', $params);
-
-		$params2['version'] = 3;
-		$params2['label'] = $label;
-		$params2['is_active'] = $active;
-		$params2['id'] = $result['id'];
-
-		civicrm_api('CustomField', 'create', $params2);
-	}
+    $params = array(
+        'custom_group_id'   =>  $gid,
+        'label'             =>  $label
+    );
+    $result = civicrm_api3('CustomField', 'Getsingle', $params);
+    if (!isset($result['id'])) {
+        unset($params);
+        $params = array(
+            'custom_group_id'   =>  $gid,
+            'name'              =>  $name,
+            'label'             =>  $name,
+            'html_type'         =>  $html_type,
+            'data_type'         =>  $data_type,
+            'weight'            =>  $weight,
+            'is_active'         =>  $active
+        );
+        $result = civicrm_api3('CustomField', 'Create', $params);
+        
+        $params2= array(
+            'label'     =>  $label,
+            'active'    =>  $active,
+            'id'        =>  $result['id']
+        );
+        civicrm_api3('CustomField', 'Create', $params2);
+    }
 }
 
 function _mutatieproces_delete_custom_group($name) {
-	$params['version']  = 3;
-	$params['name'] = $name;
-	$result = civicrm_api('CustomGroup', 'getsingle', $params);
-	if (isset($result['id'])) {
-		$gid = $result['id'];
-		unset($params);
-		$params['version']  = 3;
-		$params['custom_group_id'] = $gid;
-		$result = civicrm_api('CustomField', 'get', $params);
-		if (isset($result['values']) && is_array($result['values'])) {
-			foreach($result['values']  as $field) {
-				unset($params);
-				$params['version']  = 3;
-				$params['id'] = $field['id'];
-				civicrm_api('CustomField', 'delete', $params);
-			}
-		}
-
-		unset($params);
-		$params['version']  = 3;
-		$params['id'] = $gid;
-		$result = civicrm_api('CustomGroup', 'delete', $params);
-	}
+    $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $name));
+    if (isset($result['id'])) {
+        $gid = $result['id'];
+        $result = civicrm_api3('CustomField', 'Get', array('custom_group_id' => $gid));
+        if (isset($result['values']) && is_array($result['values'])) {
+            foreach($result['values']  as $field) {
+                unset($params);
+                civicrm_api3('CustomField', 'Delete', array('id' => $field['id']));
+            }
+        }
+        $result = civicrm_api3('CustomGroup', 'Delete', array('id' => $gid));
+    }
 }
 
 function _mutatieproces_enable_custom_group($name, $enable) {
-  $params['version']  = 3;
-  $params['name'] = $name;
-  $result = civicrm_api('CustomGroup', 'getsingle', $params);
-  if (isset($result['id'])) {
-	$gid = $result['id'];
-	unset($params);
-	$params['version']  = 3;
-	$params['id'] = $gid;
-	$params['is_active'] = $enable ? '1' : '0';
-	$result = civicrm_api('CustomGroup', 'update', $params);
-  }
+    $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $name));
+    if (isset($result['id'])) {
+        $gid = $result['id'];
+        $params = array(
+            'id'        =>  $gid,
+            'is_active' =>  $enable ? '1' : '0'
+        );
+	$result = civicrm_api3('CustomGroup', 'update', $params);
+    }
 }
-
-
+/**
+ * Implementation of hook civicrm_pageRun
+ * 
+ * if page = CRM_Contact_Page_View_Summary
+ * - determine if button huuropzeggen should be shown. 
+ * 
+ * @author Jaap Jansma (jaap.jansma@civicoop.org) and Erik Hommel (erik.hommel@civicoop.org)
+ * @date 20 Jan 2014
+ * @param type $page
+ */
 function mutatieproces_civicrm_pageRun( &$page ) {
-
-	$hov_opzeggen = false;
-	$huishouden_id = $page->getVar('_contactId');
-	$contactId = $page->getVar('_contactId');
-
-	$contactHoofdHuurder = CRM_Utils_DgwUtils::checkContactHoofdhuurder( $contactId );
-	if ( $contactHoofdHuurder ) {
-		$huishoudens = CRM_Utils_DgwUtils::getHuishoudens( $contactId, 'relatie hoofdhuurder', true );
-		foreach($huishoudens as $huishouden) {
-			$huishouden_id = $huishouden['huishouden_id'];
-		}
-	}
-
-	$result = civicrm_api('Contact', 'getsingle', array('version' => 3, 'contact_id' => $huishouden_id));
-	if (!isset($result['is_error'])) {
-		if ($result['contact_type'] == 'Household') {
-			$civiparms2 = array('version' => 3, 'name' => 'HOV_nummer_First');
-			$civires2 = civicrm_api('CustomField', 'getsingle', $civiparms2);
-			if (!civicrm_error($civires2)) {
-				$custom_id = $civires2['id'];
-				$result = civicrm_api('Contact', 'getsingle', array('version' => 3, 'contact_id' => $huishouden_id, 'return.custom_'.$custom_id => 1));
-				if (isset($result['custom_'.$custom_id]) && $result['custom_'.$custom_id]) {
-					$hov_opzeggen = true;
-				}
-			}
-		}
-	}
-
-	if ($hov_opzeggen) {
-		$page->assign('show_hov_opzeggen', '1');
-		$page->assign('hov_opzeggen_contact_id', $huishouden_id);
-	} else {
-		$page->assign('show_hov_opzeggen', '0');
-		$page->assign('hov_opzeggen_contact_id', '0');
-	}
+    $page_name = $page->getVar('_name');
+    if ($page_name == "CRM_Contact_Page_View_Summary") {
+        $contact_id = $page->getVar('_contact_id');
+        $contact_type = CRM_Contact_BAO_Contact::getContactType($contact_id);
+        /*
+         * determine if button Huurovereenkomst opzeggen should be shown based
+         * on contact_type
+         */
+        $huur_opzeggen = _mutatieproces_checkHovOpzeggen($contact_id, $contact_type);
+        if ($huur_opzeggen) {
+            $page->assign('show_hov_opzeggen', '1');
+            $page->assign('hov_opzeggen_contact_id', $contact_id);
+        } else {
+            $page->assign('show_hov_opzeggen', '0');
+            $page->assign('hov_opzeggen_contact_id', '0');
+        }
+    }
 }
 
 function mutatieproces_civicrm_buildForm($formName, &$form) {
-	if ($formName == 'CRM_Case_Form_Case') {
-		if ($form->getAction() == CRM_Core_Action::ADD) {
-			$case_type_id = _mutatieproces_get_case_type_id('DossierOpzeggingHuurcontract');
-			if ($case_type_id && $form->elementExists('case_type_id')) {
-				$cases = $form->getElement('case_type_id');
-				foreach($cases->_options as $id => $option) {
-					if ($id == $case_type_id) {
-						unset($cases->_options[$id]);
-					}
-				}
-			}
-		}
-	}
+    if ($formName == 'CRM_Case_Form_Case') {
+        if ($form->getAction() == CRM_Core_Action::ADD) {
+            $case_type_id = _mutatieproces_get_case_type_id('DossierOpzeggingHuurcontract');
+            if ($case_type_id && $form->elementExists('case_type_id')) {
+                $cases = $form->getElement('case_type_id');
+                foreach($cases->_options as $id => $option) {
+                    if ($id == $case_type_id) {
+                        unset($cases->_options[$id]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 function _mutatieproces_get_case_type_id($case) {
-	$option_group = civicrm_api('OptionGroup', 'getsingle', array('name' => 'case_type', 'version' => '3'));
-	$option_group_id = false;
-	if (isset($option_group['id'])) {
-		$option_group_id = $option_group['id'];
-	} else {
-		return false;
-	}
-	$option_value = civicrm_api('OptionValue', 'getsingle', array('option_group_id' => $option_group_id, 'name' => $case, 'version' => '3'));
-	$option_value_id = false;
-	$option_value_value = false;
-	if (isset($option_value['id'])) {
-		$option_value_id = $option_value['id'];
-		$option_value_value = $option_value['value'];
-	}
+    $option_group = civicrm_api('OptionGroup', 'getsingle', array('name' => 'case_type', 'version' => '3'));
+    $option_group_id = false;
+    if (isset($option_group['id'])) {
+        $option_group_id = $option_group['id'];
+    } else {
+        return false;
+    }
+    $option_value = civicrm_api('OptionValue', 'getsingle', array('option_group_id' => $option_group_id, 'name' => $case, 'version' => '3'));
+    $option_value_id = false;
+    $option_value_value = false;
+    if (isset($option_value['id'])) {
+        $option_value_id = $option_value['id'];
+        $option_value_value = $option_value['value'];
+    }
 
-	return $option_value_value;
+    return $option_value_value;
 }
 /**
  * Implementation of hook civicrm_custom 
@@ -509,7 +486,9 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
                         $result['hov_start_date'] = $param['value'];
                         break;
                     case "Einddatum_HOV":
-                        $result['hov_end_date'] = $param['value'];
+                        if ($param['value'] != "19700101") {
+                            $result['hov_end_date'] = $param['value'];
+                        }
                         break;
                 }
                 break;
@@ -528,10 +507,77 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
                         $result['hov_start_date'] = $param['value'];
                         break;
                     case "einddatum_overeenkomst":
-                        $result['hov_end_date'] = $param['value'];
+                        if ($param['value'] != "19700101") {
+                            $result['hov_end_date'] = $param['value'];
+                        }
                         break;
                 }
+                break;
         }        
     }
     return $result;
+}
+/**
+ * Function to check if the button Hov Opzeggen should be available for 
+ * contact (type required to determine)
+ * True will be returned if
+ *   - contact_type = Organization and Organization has at least one active
+ *     huurovereenkomst that does not have an associated case huuropzeggingsdossier
+ *   - contact_type = Household and Household has at least one active huurovereenkomst
+ *     that does not have an associated case huuropzeggingsdossier
+ *   - contact_type = Individual and Individual is an active hoofdhuurder and
+ *     related household has at least one active huurovereenkomst that does not
+ *     have an associated case huuropzeggingsdossier * 
+ * 
+ * @author Erik Hommel (erik.hommel@civicoop.org)
+ * @date 20 Jan 2014
+ * @param int $contact_id
+ * @param string $contact_type
+ * @return TRUE or FALSE
+ */
+function _mutatieproces_checkHovOpzeggen($contact_id, $contact_type) {
+    if (empty($contact_id) || empty($contact_type)) {
+        return FALSE;
+    }
+    $opzeggen = FALSE;
+    /*
+     * further processing based on contact_type
+     */
+    switch($contact_type) {
+        /*
+         * if individual, first check if individual is active hoofdhuurder
+         */
+        case "Individual": 
+            $hoofd_huurder = CRM_Utils_DgwUtils::checkContactHoofdHuurder($contact_id);
+            if ($hoofd_huurder == FALSE) {
+                $opzeggen = FALSE;
+            } else {
+                /*
+                 * retrieve active huishouden(s)
+                 */
+                $huis_houdens = CRM_Utils_DgwUtils::getHuishoudens($contact_id, "relatie hoofdhuurder", TRUE);
+                if (empty($huis_houdens)) {
+                    $opzeggen = FALSE;
+                } else {
+                    foreach ($huis_houdens as $huis_houden) {
+                        $count_huishouden_hovs = CRM_Utils_DgwMutatieprocesUtils::countActiveHovs($huis_houden['huishouden_id'], $contact_type);
+                        if ($count_huishouden_hovs == 0) {
+                            $opzeggen = FALSE;
+                        } else {
+                            /*
+                             * check if there is a opzeggingscase for the contact
+                             */
+                            $opzeggings_case = CRM_Utils_DgwMutatieprocesUtils::checkOpzeggingCase($huis_houden['huishouden_id']);
+                            $opzeggen = $opzeggings_case;
+                        }
+                    }
+                }
+            }
+            break;
+        case "Household":
+            break;
+        case "Organization":
+            break;
+    }
+    return $opzeggen;
 }

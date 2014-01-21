@@ -150,7 +150,7 @@ class CRM_Mutatieproces_PropertyContract {
          * update record if required
          */
         if (!empty($update_fields)) {
-            $query = "INSERT INTO ".$this->_table. " SET ".implode(", ", $insert_fields);
+            $query = "UPDATE ".$this->_table. " SET ".implode(", ", $update_fields);
             CRM_Core_DAO::executeQuery($query);
         }
        
@@ -170,7 +170,7 @@ class CRM_Mutatieproces_PropertyContract {
         if (empty($hov_id) || !is_numeric($hov_id)) {
             return $property_contract;
         }
-        $query = "SELECT * FROM ".$this->_table." WHERE hov_id = $hov_id";
+        $query = "SELECT * FROM civicrm_property_contract WHERE hov_id = $hov_id";
         $dao = CRM_Core_DAO::executeQuery($query);
         if ($dao->fetch()) {
             $property_contract['id'] = $dao->id;
@@ -196,11 +196,14 @@ class CRM_Mutatieproces_PropertyContract {
      * @static 
      */
     public static function getPropertyContractsWithContactId($contact_id) {
-        $property_contract = array();
+        $property_contracts = array();
         if (empty($contact_id) || !is_numeric($contact_id)) {
-            return $property_contract;
+            return $property_contracts;
         }
-        return $property_contract;
+        /*
+         * retrieve all hov_id's for contact from custom tables
+         */
+        return $property_contracts;
         
     }
     /**

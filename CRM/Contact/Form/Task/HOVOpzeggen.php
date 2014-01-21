@@ -12,6 +12,7 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
     protected $_case_type = "";
     protected $_case_type_id = 0;
     protected $_contact_id;
+    protected $_contact_type = "";
     
     /**
      * function to build all the data structures needed to build the form
@@ -20,9 +21,10 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
      * @access public
      */
     public function preProcess() {
-        $cid = CRM_Utils_Request::retrieve('cid', 'Positive', $this, FALSE);
-        if ($cid) {
-            $this->_contactIds = array($cid);
+        $this->_contact_id = CRM_Utils_Request::retrieve('cid', 'Positive', $this, FALSE);
+        $this->_contact_type = CRM_Contact_BAO_Contact::getContactType($this->_contact_id);
+        if ($this->_contact_id) {
+            $this->_contactIds = array($this->_contact_id);
             $this->assign('totalSelectedContacts', 1);
         } else {
             parent::preProcess();
@@ -61,26 +63,41 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
      */
     protected function addHovToForm($contact_id, $hovs) {
         $hovs->addOption( '- Selecteer een huurovereenkomst -', '');
-        $gid = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('Huurovereenkomst');
-        $values = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomValuesForContactAndCustomGroupSorted($contact_id, $gid);
         $case_type_id = $this->getCaseTypeId('Huuropzeggingsdossier');
         $already_case = array();
-        if ($case_type_id) {
-            $result = civicrm_api('Case', 'get', array('version'=>3, 'contact_id'=>$contact_id, 'case_type_id' => $case_type_id));
-            if (isset($result['values']) && is_array($result['values'])) {
-                foreach($result['values'] as $val) {
-                    $custom_values = civicrm_api('CustomValue', 'get', array('version'=>3, 'entity_table'=>'', 'entity_id'=>$val['id'], 'return.einde_huurcontract:hov_nr'=>1));
-                    if (isset($custom_values['values']) && is_array($custom_values['values'])) {
-                        foreach($custom_values['values'] as $custom_value) {
-                            $already_case[] = $custom_value['latest'];
+        /*
+         * process based on contact type (huurovereenkomst huishouden or
+         * huurovereenkomst organisatie)
+         */
+        if ($this->_contact_type == "Household") {
+            $gid = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('Huurovereenkomst (huishouden)');
+            $values = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomValuesForContactAndCustomGroupSorted($contact_id, $gid);
+            if ($case_type_id) {
+                $case_params = array(
+                    'contact_id'    =>  $contact_id,
+                    'case_type_id'  =>  $case_type_id
+                );
+                $result = civicrm_api3('Case', 'Get', $case_params);
+                if (isset($result['values']) && is_array($result['values'])) {
+                    foreach($result['values'] as $val) {
+                        $custom_params = array(
+                            'entity_table'                      =>  '',
+                            'entity_id'                         =>  $val['id'],
+                            'return.eind_huurcontract:hov_nr'   =>  1  
+                        );
+                        $custom_values = civicrm_api3('CustomValue', 'Get', $custom_params);
+                        if (isset($custom_values['values']) && is_array($custom_values['values'])) {
+                            foreach($custom_values['values'] as $custom_value) {
+                                $already_case[] = $custom_value['latest'];
+                            }
                         }
                     }
                 }
             }
-        }
-        foreach($values as $id => $value) {
-            if (!in_array($value['HOV_nummer_First'], $already_case)) {
-                $hovs->addOption($value['VGE_adres_First'].' (HOV: '.$value['HOV_nummer_First'].', VGE: '.$value['VGE_nummer_First'].')', $id);
+            foreach($values as $id => $value) {
+                if (!in_array($value['HOV_nummer_First'], $already_case)) {
+                    $hovs->addOption($value['VGE_adres_First'].' (HOV: '.$value['HOV_nummer_First'].', VGE: '.$value['VGE_nummer_First'].')', $id);
+                }
             }
         }
         return $hovs;
