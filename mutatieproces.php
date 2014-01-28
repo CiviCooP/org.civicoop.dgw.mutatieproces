@@ -40,7 +40,7 @@ function mutatieproces_civicrm_uninstall() {
 function mutatieproces_civicrm_enable() {
     _mutatieproces_add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', '', '');
     _mutatieproces_add_activity_type('Adviesgesprek', 'Inplannen van een adviesgesprek');
-    $dossier = _mutatieproces_add_case('DossierOpzeggingHuurcontract');
+    $dossier = _mutatieproces_add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
         /*
@@ -196,7 +196,7 @@ function _mutatieproces_add_activity_type($type, $description) {
     civicrm_api3('ActivityType', 'Create', $param);
 }
 
-function _mutatieproces_add_relationship_type($name_a_b, $name_b_a, $contact_type_a, $contact_type_b) {
+function _mutatieproces_add_relationship_type($name_a_b, $name_b_a, $contact_type_a = "", $contact_type_b = "") {
     $params['name_a_b'] = $name_a_b;
     $params['name_b_a'] = $name_b_a;
     if (strlen($contact_type_a)) {
@@ -205,7 +205,7 @@ function _mutatieproces_add_relationship_type($name_a_b, $name_b_a, $contact_typ
     if (strlen($contact_type_b)) {
         $params['contact_type_b'] = $contact_type_b;
     }
-    $result = civicrm_api('relationship_type', 'get', $params);
+    $result = civicrm_api3('relationship_type', 'get', $params);
     if ($result['is_error'] == 1 || $result['count'] == 0) {
         $result = civicrm_api3('RelationshipType', 'Create', $params);
     }
@@ -244,8 +244,10 @@ function _mutatieproces_add_case($case) {
 }
 
 function _mutatieproces_add_custom_group($group, $group_title, $case_id, $extends) {
-    $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
-    if (!isset($result['id'])) {
+    try {
+        $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
+        $gid = $result['id'];
+    } catch(CiviCRM_API3_Exception $e) {
         $params = array(
             'name'                          =>  $group,
             'title'                         =>  $group_title,
@@ -254,9 +256,6 @@ function _mutatieproces_add_custom_group($group, $group_title, $case_id, $extend
             'is_active'                     =>  1
         );
         $result = civicrm_api3('CustomGroup', 'Create', $params);
-    }
-    $gid = false;
-    if (isset($result['id'])) {
         $gid = $result['id'];
     }
     return $gid;
@@ -267,8 +266,9 @@ function _mutatieproces_add_custom_field($gid, $name, $label, $data_type, $html_
         'custom_group_id'   =>  $gid,
         'label'             =>  $label
     );
-    $result = civicrm_api3('CustomField', 'Getsingle', $params);
-    if (!isset($result['id'])) {
+    try {
+        $result = civicrm_api3('CustomField', 'Getsingle', $params);
+    } catch (CiviCRM_API3_Exception $e) {
         unset($params);
         $params = array(
             'custom_group_id'   =>  $gid,
@@ -280,7 +280,7 @@ function _mutatieproces_add_custom_field($gid, $name, $label, $data_type, $html_
             'is_active'         =>  $active
         );
         $result = civicrm_api3('CustomField', 'Create', $params);
-        
+
         $params2= array(
             'label'     =>  $label,
             'active'    =>  $active,
@@ -329,13 +329,13 @@ function _mutatieproces_enable_custom_group($name, $enable) {
 function mutatieproces_civicrm_pageRun( &$page ) {
     $page_name = $page->getVar('_name');
     if ($page_name == "CRM_Contact_Page_View_Summary") {
-        $contact_id = $page->getVar('_contact_id');
+        $contact_id = $page->getVar('_contactId');
         $contact_type = CRM_Contact_BAO_Contact::getContactType($contact_id);
         /*
          * determine if button Huurovereenkomst opzeggen should be shown based
          * on contact_type
          */
-        $huur_opzeggen = _mutatieproces_checkHovOpzeggen($contact_id, $contact_type);
+        $huur_opzeggen = CRM_Utils_DgwMutatieprocesUtils::checkHovOpzeggen($contact_id, $contact_type);
         if ($huur_opzeggen) {
             $page->assign('show_hov_opzeggen', '1');
             $page->assign('hov_opzeggen_contact_id', $contact_id);
@@ -349,7 +349,7 @@ function mutatieproces_civicrm_pageRun( &$page ) {
 function mutatieproces_civicrm_buildForm($formName, &$form) {
     if ($formName == 'CRM_Case_Form_Case') {
         if ($form->getAction() == CRM_Core_Action::ADD) {
-            $case_type_id = _mutatieproces_get_case_type_id('DossierOpzeggingHuurcontract');
+            $case_type_id = _mutatieproces_get_case_type_id('Huuropzeggingsdossier');
             if ($case_type_id && $form->elementExists('case_type_id')) {
                 $cases = $form->getElement('case_type_id');
                 foreach($cases->_options as $id => $option) {
@@ -516,68 +516,4 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
         }        
     }
     return $result;
-}
-/**
- * Function to check if the button Hov Opzeggen should be available for 
- * contact (type required to determine)
- * True will be returned if
- *   - contact_type = Organization and Organization has at least one active
- *     huurovereenkomst that does not have an associated case huuropzeggingsdossier
- *   - contact_type = Household and Household has at least one active huurovereenkomst
- *     that does not have an associated case huuropzeggingsdossier
- *   - contact_type = Individual and Individual is an active hoofdhuurder and
- *     related household has at least one active huurovereenkomst that does not
- *     have an associated case huuropzeggingsdossier * 
- * 
- * @author Erik Hommel (erik.hommel@civicoop.org)
- * @date 20 Jan 2014
- * @param int $contact_id
- * @param string $contact_type
- * @return TRUE or FALSE
- */
-function _mutatieproces_checkHovOpzeggen($contact_id, $contact_type) {
-    if (empty($contact_id) || empty($contact_type)) {
-        return FALSE;
-    }
-    $opzeggen = FALSE;
-    /*
-     * further processing based on contact_type
-     */
-    switch($contact_type) {
-        /*
-         * if individual, first check if individual is active hoofdhuurder
-         */
-        case "Individual": 
-            $hoofd_huurder = CRM_Utils_DgwUtils::checkContactHoofdHuurder($contact_id);
-            if ($hoofd_huurder == FALSE) {
-                $opzeggen = FALSE;
-            } else {
-                /*
-                 * retrieve active huishouden(s)
-                 */
-                $huis_houdens = CRM_Utils_DgwUtils::getHuishoudens($contact_id, "relatie hoofdhuurder", TRUE);
-                if (empty($huis_houdens)) {
-                    $opzeggen = FALSE;
-                } else {
-                    foreach ($huis_houdens as $huis_houden) {
-                        $count_huishouden_hovs = CRM_Utils_DgwMutatieprocesUtils::countActiveHovs($huis_houden['huishouden_id'], $contact_type);
-                        if ($count_huishouden_hovs == 0) {
-                            $opzeggen = FALSE;
-                        } else {
-                            /*
-                             * check if there is a opzeggingscase for the contact
-                             */
-                            $opzeggings_case = CRM_Utils_DgwMutatieprocesUtils::checkOpzeggingCase($huis_houden['huishouden_id']);
-                            $opzeggen = $opzeggings_case;
-                        }
-                    }
-                }
-            }
-            break;
-        case "Household":
-            break;
-        case "Organization":
-            break;
-    }
-    return $opzeggen;
 }

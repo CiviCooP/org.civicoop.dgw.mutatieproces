@@ -41,7 +41,7 @@ class CRM_Mutatieproces_Page_Vgecomplete extends CRM_Core_Page {
                 /*
                  * update all custom fields with latest property values
                  */
-                $result_custom_fields = $property->setHuuropzeggingCustomFields();
+                $property->setLoadingCustomFields();
             }
         }
         fclose($sf);

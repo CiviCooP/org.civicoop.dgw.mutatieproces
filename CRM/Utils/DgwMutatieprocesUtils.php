@@ -243,7 +243,10 @@ class CRM_Utils_DgwMutatieprocesUtils {
                     $end_date_field = $end_date_field_array['column_name'];
                     $end_date = date("Ymd", strtotime($dao->$end_date_field));
                     $now_date = date("Ymd");
-                    if ($end_date > $now_date) {
+                    /*
+                     * count if end date after today or empty (19700101)
+                     */
+                    if ($end_date > $now_date || $end_date == "19700101") {
                         $count_hovs++;
                     }
                 }
@@ -279,6 +282,106 @@ class CRM_Utils_DgwMutatieprocesUtils {
         /*
          * get all cases for contact as API does not take case_type_id into consideration
          */
-        $cases = civicrm_api3('Case', 'Get', array('contact_id' => $contact_id));
+        try {
+            $cases = civicrm_api3('Case', 'Get', array('contact_id' => $contact_id));
+            if (isset($cases['count']) && $cases['count'] == 0) {
+                return FALSE;
+            } else {
+                foreach ($cases['values'] as $case) {
+                    if ($case['is_deleted'] == 0 && $case['status_id'] != 2 && $case['case_type_id'] == $case_type_id) {
+                        return TRUE;
+                    }
+                }
+            }
+        } catch(CiviCRM_API3_Exception $e) {
+            return FALSE;
+        }
+    }
+    /**
+     * Function to check if the button Hov Opzeggen should be available for 
+     * contact (type required to determine)
+     * True will be returned if
+     *   - contact_type = Organization and Organization has at least one active
+     *     huurovereenkomst that does not have an associated case huuropzeggingsdossier
+     *   - contact_type = Household and Household has at least one active huurovereenkomst
+     *     that does not have an associated case huuropzeggingsdossier
+     *   - contact_type = Individual and Individual is an active hoofdhuurder and
+     *     related household has at least one active huurovereenkomst that does not
+     *     have an associated case huuropzeggingsdossier * 
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 20 Jan 2014
+     * @param int $contact_id
+     * @param string $contact_type
+     * @return TRUE or FALSE
+     * @access public
+     * @static
+     */
+    public static function checkHovOpzeggen($contact_id, $contact_type) {
+        if (empty($contact_id) || empty($contact_type)) {
+            return FALSE;
+        }
+        $opzeggen = FALSE;
+        /*
+         * further processing based on contact_type
+         */
+        switch($contact_type) {
+            /*
+             * if individual, first check if individual is active hoofdhuurder
+             */
+            case "Individual": 
+                $hoofd_huurder = CRM_Utils_DgwUtils::checkContactHoofdHuurder($contact_id);
+                if ($hoofd_huurder == FALSE) {
+                    $opzeggen = FALSE;
+                } else {
+                    /*
+                     * retrieve active huishouden(s)
+                     */
+                    $huis_houdens = CRM_Utils_DgwUtils::getHuishoudens($contact_id, "relatie hoofdhuurder", TRUE);
+                    if (empty($huis_houdens)) {
+                        $opzeggen = FALSE;
+                    } else {
+                        foreach ($huis_houdens as $huis_houden) {
+                            $count_huishouden_hovs = self::countActiveHovs($huis_houden['huishouden_id'], "Household");
+                            if ($count_huishouden_hovs == 0) {
+                                $opzeggen = FALSE;
+                            } else {
+                                /*
+                                 * check if there is a opzeggingscase for the contact
+                                 */
+                                $opzeggings_case = self::checkOpzeggingCase($huis_houden['huishouden_id']);
+                                if ($opzeggings_case == TRUE) {
+                                    $opzeggen = FALSE;
+                                } else {
+                                    $opzeggen = TRUE;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            case "Household":
+                /*
+                 * retrieve active huishouden(s)
+                 */
+                $count_huishouden_hovs = self::countActiveHovs($contact_id, $contact_type);
+                if ($count_huishouden_hovs == 0) {
+                    $opzeggen = FALSE;
+                } else {
+                    /*
+                     * check if there is a opzeggingscase for the contact
+                     */
+                    $opzeggings_case = self::checkOpzeggingCase($contact_id);
+                    if ($opzeggings_case == TRUE) {
+                        $opzeggen = FALSE;
+                    } else {
+                        $opzeggen = TRUE;
+                    }
+                }
+                break;
+            case "Organization":
+                break;
+        }
+        return $opzeggen;
     }
 }

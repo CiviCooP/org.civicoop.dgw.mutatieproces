@@ -86,7 +86,7 @@ class CRM_Mutatieproces_Property {
      * 
      * @author Erik Hommel (erik.hommel@civicoop.org)
      * @date 6 Jan 2014
-     * @param integer $vge_id
+     * @param int $vge_id
      * @return array $result
      * @access public
      * @static
@@ -203,31 +203,6 @@ class CRM_Mutatieproces_Property {
         return $result;
     }
     /**
-     * function to format the postal code 1234 AA
-     * 
-     * @author Erik Hommel (erik.hommel@civicoop.org)
-     * @date 6 Jan 2014
-     * @param string $postal_code
-     * @return string $formatted_postal_code
-     * @access public
-     * @static
-     */
-    public static function formatPostalCode($postal_code) {
-        $formatted_postal_code = $postal_code;
-        /*
-         * only format if length incoming string is 6
-         * and pattern is 1234AA
-         */
-        if (!empty($postal_code) && strlen($postal_code == 6)) {
-            if (is_numeric(substr($postal_code, 0, 4))) {
-                if (is_string(substr($postal_code, 4, 2))) {
-                    $formatted_postal_code = substr($postal_code, 0, 4)." ".substr($postal_code, 4, 2);
-                }
-            }
-        }
-        return $formatted_postal_code;
-    }
-    /**
      * function to check if the address_id exists in CiviCRM
      * 
      * @author Erik Hommel (erik.hommel@civicoop.org
@@ -325,11 +300,10 @@ class CRM_Mutatieproces_Property {
      * 
      * @author Erik Hommel (erik.hommel@civicoop.org)
      * @date 9 Jan 2014
-     * @param array $params
      * @return array $result (is_error, can be 1 or 0 and optional error_message)
      * @access public
      */
-    public function setHuuropzeggingCustomFields() {
+    public function setLoadingCustomFields() {
         $result = array();
         /*
          * vge_id is required
@@ -431,7 +405,15 @@ class CRM_Mutatieproces_Property {
                         $field_value = CRM_Core_DAO::escapeString($this->vge_street_unit);
                         break;
                     case "vge_adres":
-                        $field_value = CRM_Core_DAO::escapeString($this->_formatVgeAdres());
+                        $params = array(
+                            'street_name'   => $this->vge_street_name,
+                            'street_number' => $this->vge_street_number,
+                            'street_unit'   => $this->vge_street_unit,
+                            'postal_code'   => $this->vge_postal_code,
+                            'city'          => $this->vge_city
+                        );
+                        $address = CRM_Utils_DgwUtils::formatVgeAdres($params);
+                        $field_value = CRM_Core_DAO::escapeString($address);
                         break;
                     case "vge_postcode":
                         $field_value = CRM_Core_DAO::escapeString($this->vge_postal_code);
@@ -549,38 +531,6 @@ class CRM_Mutatieproces_Property {
         }       
     }
     /**
-     * function to glue formatted address
-     * 
-     * @author Erik Hommel (erik.hommel@civicoop.org)
-     * @date 9 Jan 2014
-     * @return string $result
-     * @access private
-     */
-    private function _formatVgeAdres() {
-        $formatted_address = array();
-        if (!empty($this->vge_street_name)) {
-            $formatted_address[] = $this->vge_street_name;
-        }
-        if (!empty($this->vge_street_number)) {
-            $formatted_address[] = $this->vge_street_number;
-        }
-        if (!empty($this->vge_street_unit)) {
-            $formatted_address = $this->vge_street_unit;
-        }
-        $result = implode(" ", $formatted_address);
-        if (!empty($this->vge_postal_code)) {
-            $result .= ", ".$this->vge_postal_code;
-            if (!empty($this->vge_city)) {
-                $result .= " ".$this->vge_city;
-            }
-        } else {
-            if (!empty($this->vge_city)) {
-                $result .= ", ".$this->vge_city;
-            }
-        }
-        return $result;
-    }
-    /**
      * function to create a property type
      * @author Erik Hommel (erik.hommel@civicoop.org)
      * @date 15 Jan 2014
@@ -643,5 +593,147 @@ class CRM_Mutatieproces_Property {
                 $this->id = $dao->id;
             }
         }
+    }
+    /**
+     * Function to set the custom fields for a vge
+     * 
+     * @author Erik Hommel (erik.hommel@civicoop.org)
+     * @date 27 Jan 2014
+     * @param type $vge_id
+     * @param type $case_id
+     * @return void
+     * @access public
+     * @static
+     */
+    public static function setVgeFieldsCase($vge_id, $case_id) {
+        /*
+         * end if vge_id, case_id empty or non-numeric
+         */
+        if (empty($vge_id) || !is_numeric($vge_id) || empty($case_id) || !is_numeric($case_id)) {
+            return;
+        }
+        /*
+         * retrieve custom group for vge
+         */
+        $custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('vge');
+        $custom_table = $custom_group['table_name'];
+        $vge_id_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('vge_nr', $custom_group['id']);
+        $vge_id_field_name = $vge_id_field['column_name'];
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $query_vge = "SELECT COUNT(*) AS count_vge  FROM $custom_table WHERE entity_id = $case_id AND $vge_id_field_name = $vge_id";
+        $dao_vge = CRM_Core_DAO::executeQuery($query_vge);
+        if ($dao_vge->fetch()) {
+            if ($dao_vge->count_vge == 0) {
+                $action = "INSERT INTO";
+            } else {
+                $action = "UPDATE";
+            }
+        }
+        $fields = array();
+        /*
+         * retrieve vge_data
+         */
+        $vge_data = self::getByVgeId($vge_id);
+        if (isset($vge_data['complex_id'])) {
+            $complex_id = CRM_Core_DAO::escapeString($vge_data['complex_id']);
+            $complex_id_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("complex_nr", $custom_group['id']);
+            $complex_id_field_name = $complex_id_field['column_name'];
+            $fields[] = $complex_id_field_name." = '$complex_id'";
+        }
+        if (isset($vge_data['vge_street_name'])) {
+            $street_name = CRM_Core_DAO::escapeString($vge_data['vge_street_name']);
+            $street_name_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_straat", $custom_group['id']);
+            $street_name_field_name = $street_name_field['column_name'];
+            $fields[] = $street_name_field_name." = '$street_name'";
+            $format_address_params['street_name'] = $vge_data['vge_street_name'];
+        }
+        if (isset($vge_data['vge_street_number'])) {
+            $street_number_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_huis_nr", $custom_group['id']);
+            $street_number_field_name = $street_number_field['column_name'];
+            $fields[] = $street_number_field_name." = '{$vge_data['vge_street_number']}'";
+            $format_address_params['street_number'] = $vge_data['vge_street_number'];
+        }
+        if (isset($vge_data['vge_street_unit'])) {
+            $street_unit = CRM_Core_DAO::escapeString($vge_data['vge_street_unit']);
+            $street_unit_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_suffix", $custom_group['id']);
+            $street_unit_field_name = $street_unit_field['column_name'];
+            $fields[] = $street_unit_field_name." = '$street_unit'";
+            $format_address_params['street_unit'] = $vge_data['vge_street_unit'];
+        }
+        if (isset($vge_data['vge_postal_code'])) {
+            $postal_code = CRM_Core_DAO::escapeString($vge_data['vge_postal_code']);
+            $postal_code_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_postcode", $custom_group['id']);
+            $postal_code_field_name = $postal_code_field['column_name'];
+            $fields[] = $postal_code_field_name." = '$postal_code'";
+            $format_address_params['postal_code'] = $vge_data['vge_postal_code'];
+        }
+        if (isset($vge_data['vge_city'])) {
+            $city = CRM_Core_DAO::escapeString($vge_data['vge_city']);
+            $city_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_plaats", $custom_group['id']);
+            $city_field_name = $city_field['column_name'];
+            $fields[] = $city_field_name." = '$city'";
+            $format_address_params['city'] = $vge_data['vge_city'];
+        }
+        if (!empty($format_address_params)) {
+            $address = CRM_Core_DAO::escapeString(CRM_Utils_DgwUtils::formatVgeAdres($format_address_params));
+            $address_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("vge_adres", $custom_group['id']);
+            $address_field_name = $address_field['column_name'];
+            $fields[] = $address_field_name." = '$address'";
+        }
+        $action_query_vge = $action." $custom_table SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+            $action_query_vge .= " WHERE entity_id = $case_id";
+        }
+        if ($action == "INSERT INTO") {
+            $action_query_vge .= ", entity_id = $case_id, $vge_id_field_name = $vge_id";
+        }
+        CRM_Core_DAO::executeQuery($action_query_vge);
+        /*
+         * retrieve custom group for woningwaardering
+         */
+        $custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('woningwaardering');
+        $custom_table = $custom_group['table_name'];
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $query_ww = "SELECT COUNT(*) AS count_ww  FROM $custom_table WHERE entity_id = $case_id";
+        $dao_ww = CRM_Core_DAO::executeQuery($query_ww);
+        if ($dao_ww->fetch()) {
+            if ($dao_ww->count_vge == 0) {
+                $action = "INSERT INTO";
+            } else {
+                $action = "UPDATE";
+            }
+        }
+        $fields = array();
+        if (isset($vge_data['epa_label'])) {
+            $epa_label = CRM_Core_DAO::escapeString($vge_data['epa_label']);
+            $epa_label_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("epa_label_opzegging", $custom_group['id']);
+            $epa_label_field_name = $epa_label_field['column_name'];
+            $fields[] = $epa_label_field_name." = '$epa_label'";
+        }
+        if (isset($vge_data['epa_pre'])) {
+            $epa_pre = CRM_Core_DAO::escapeString($vge_data['epa_pre']);
+            $epa_pre_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("epa_pre_opzegging", $custom_group['id']);
+            $epa_pre_field_name = $epa_pre_field['column_name'];
+            $fields[] = $epa_pre_field_name." = '$epa_pre'";
+        }
+        if (isset($vge_data['square_mtrs'])) {
+            $square_mtrs = CRM_Core_DAO::escapeString($vge_data['square_mtrs']);
+            $square_mtrs_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("woningoppervlakte", $custom_group['id']);
+            $square_mtrs_field_name = $square_mtrs_field['column_name'];
+            $fields[] = $square_mtrs_field_name." = '$square_mtrs'";
+        }
+        $action_query_ww = $action." $custom_table SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+            $action_query_ww .= " WHERE entity_id = $case_id";
+        }
+        if ($action == "INSERT INTO") {
+            $action_query_ww .= ", entity_id = $case_id";
+        }
+        CRM_Core_DAO::executeQuery($action_query_ww);
+        
     }
 }

@@ -13,6 +13,11 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
     protected $_case_type_id = 0;
     protected $_contact_id;
     protected $_contact_type = "";
+    protected $_custom_group = 0;
+    protected $_custom_values = "";
+    protected $_vge_nr_fieldname = "";
+    protected $_hov_nr_fieldname = "";
+    protected $_adres_fieldname = "";
     
     /**
      * function to build all the data structures needed to build the form
@@ -45,7 +50,16 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
 
             $this->addSelectOther('hov', 'Huurovereenkomst', array(), array(), true);
             $hovs = $this->getElement('hov_id');
-            $hovs = $this->addHovToForm($this->_contactIds[0], $hovs);
+            /*
+             * get huishouden for hoofdhuurder if contact_type = Individual
+             */
+            if ($this->_contact_type == "Individual") {
+                $huishouden_id = CRM_Utils_DgwUtils::getHuishoudenHoofdhuurder($this->_contactIds[0]);
+                $hovs = $this->addHovToForm($huishouden_id, $hovs);
+            } else {
+                $hovs = $this->addHovToForm($this->_contactIds[0], $hovs);
+            }
+            
             $this->addDate('verwachte_einddatum', 'Verwachte einddatum', true, array('formatType' => 'activityDate'));
             $this->addDefaultButtons($label, 'done', 'cancel');
         } else {
@@ -64,38 +78,31 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
     protected function addHovToForm($contact_id, $hovs) {
         $hovs->addOption( '- Selecteer een huurovereenkomst -', '');
         $case_type_id = $this->getCaseTypeId('Huuropzeggingsdossier');
-        $already_case = array();
         /*
          * process based on contact type (huurovereenkomst huishouden or
          * huurovereenkomst organisatie)
          */
-        if ($this->_contact_type == "Household") {
-            $gid = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('Huurovereenkomst (huishouden)');
-            $values = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomValuesForContactAndCustomGroupSorted($contact_id, $gid);
-            if ($case_type_id) {
-                $case_params = array(
-                    'contact_id'    =>  $contact_id,
-                    'case_type_id'  =>  $case_type_id
-                );
-                $result = civicrm_api3('Case', 'Get', $case_params);
-                if (isset($result['values']) && is_array($result['values'])) {
-                    foreach($result['values'] as $val) {
-                        $custom_params = array(
-                            'entity_table'                      =>  '',
-                            'entity_id'                         =>  $val['id'],
-                            'return.eind_huurcontract:hov_nr'   =>  1  
-                        );
-                        $custom_values = civicrm_api3('CustomValue', 'Get', $custom_params);
-                        if (isset($custom_values['values']) && is_array($custom_values['values'])) {
-                            foreach($custom_values['values'] as $custom_value) {
-                                $already_case[] = $custom_value['latest'];
-                            }
-                        }
-                    }
-                }
+        if ($this->_contact_type != "Organization") {
+            $this->_custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('Huurovereenkomst (huishouden)');
+            $this->_custom_values = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomValuesForContactAndCustomGroupSorted($contact_id, $this->_custom_group['id']);
+            $vge_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('VGE_nummer_First', $this->_custom_group['id']);
+            if (isset($vge_field['name'])) {
+                $this->_vge_nr_fieldname = $vge_field['name'];
             }
-            foreach($values as $id => $value) {
-                if (!in_array($value['HOV_nummer_First'], $already_case)) {
+            $hov_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('HOV_nummer_First', $this->_custom_group['id']);
+            if (isset($hov_field['name'])) {
+                $this->_hov_nr_fieldname = $hov_field['name'];
+            }
+            $adres_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("VGE_adres_First", $this->_custom_group['id']);
+            if (isset($adres_field['name'])) {
+                $this->_adres_fieldname = $adres_field['name'];
+            }
+            foreach($this->_custom_values as $id => $value) {
+                /*
+                 * only if allowed
+                 */
+                $add_option = CRM_Utils_DgwMutatieprocesUtils::checkHovOpzeggen($contact_id, "Household");
+                if ($add_option == TRUE) {
                     $hovs->addOption($value['VGE_adres_First'].' (HOV: '.$value['HOV_nummer_First'].', VGE: '.$value['VGE_nummer_First'].')', $id);
                 }
             }
@@ -135,77 +142,39 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
      */
     public function postProcess() {
         $session = CRM_Core_Session::singleton();
+        $hov_id = $this->getSubmitValue('hov_id');
         $urlParams = "reset=1";
         $urlString = 'civicrm/dashboard';
-
+        foreach ($this->_custom_values as $entity_id => $hov_data) {
+            if ($entity_id == $hov_id) {
+                $vge_nr = $hov_data[$this->_vge_nr_fieldname];
+                $hov_nr = $hov_data[$this->_hov_nr_fieldname];
+                $vge_adres = $hov_data[$this->_adres_fieldname];
+                
+            }
+        }
         //generate dossier opzeggen huurovereenkomst
         if (isset($this->_contactIds[0])) {
             $cid = $this->_contactIds[0];
-            $hov_id = $this->getSubmitValue('hov_id');
-            $expected_end_date = date('Ymd', strotime($this->getSubmitValue('verwachte_einddatum')));
-            $hovs = $this->getHuurovereenkomsten($cid);
+            $expected_end_date = date('Ymd', strtotime($this->getSubmitValue('verwachte_einddatum')));
             $urlParams = "reset=1&cid=".$cid;
             $urlString = 'civicrm/contact/view';
           
             $params = array(
                 'contact_id'  =>  $cid,
                 'case_type'   =>  "Huuropzeggingsdossier",
-                'subject'     =>  "Opzegging huurcontract ".$hov_id
+                'subject'     =>  "Opzegging huurcontract ".$hov_nr." (".$vge_adres.")"
             );
             $result = civicrm_api3('Case', 'Create', $params);
             if (isset($result['id'])) {
-                $case_id = $result['id'];
-                $custom_group_id = false;
-                unset($params);
                 /*
-                 * update custom group for vge gegevens
+                 * update vge and huurovereenkomst fields
                  */
-                $params = array(
-                    'name'                          =>  "vge",
-                    'extends'                       =>  "Case",
-                    );
-                $result = civicrm_api3('CustomGroup', 'Getsingle', $params);
-                if (isset($result['id'])) {
-                    $custom_group_id = $result['id'];
-                }
-                $params['entity_id'] = $case_id;
-                $hov_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hov_nr', $custom_group_id);
-                $params['custom_'.$hov_nr_field['id']] = $hov['HOV_nummer_First'];
-                $hov_start_datum_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hov_start_datum', $custom_group_id);
-                $params['custom_'.$hov_start_datum_field['id']] = $begindatum;
-                $vge_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('vge_nr', $custom_group_id);
-                $params['custom_'.$vge_nr_field['id']] = $hov['VGE_nummer_First'];
-                $vge_adres_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('vge_adres', $custom_group_id);
-                $params['custom_'.$vge_adres_field['id']] = $hov['VGE_adres_First'];
-                $verwachte_eind_datum_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('verwachte_eind_datum', $custom_group_id);
-                $params['custom_'.$verwachte_eind_datum_field['id']] = $einddatum;
-                $hoofdhurder_first = CRM_Utils_DgwMutatieprocesUtils::getPersoonsnummerFirstByRelation($cid, 'Hoofdhuurder');
-                if ($hoofdhurder_first) {
-                    $hoofdhuurder_first_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hoofdhuurder_nr_first', $custom_group_id);
-                    $params['custom_'.$hoofdhuurder_first_field['id']] = $hoofdhurder_first;
-                }
-                $medehuurder_first = CRM_Utils_DgwMutatieprocesUtils::getPersoonsnummerFirstByRelation($cid, 'Medehuurder');
-                if ($medehuurder_first) {
-                    $medehuurder_first_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('medehuurder_nr_first', $custom_group_id);
-                    $params['custom_'.$medehuurder_first_field['id']] = $medehuurder_first;
-                }
-                CRM_Core_Error::debug("params", $params);
-                civicrm_api3('CustomValue', 'Create', $params);
-                $tag_id = CRM_Utils_DgwMutatieprocesUtils::createTag('Huuropzegging ontvangen');
-                if ($tag_id !== false) {
-                    CRM_Utils_DgwMutatieprocesUtils::addTag($tag_id, $cid);
-                    $hoofdhurder_id = CRM_Utils_DgwMutatieprocesUtils::getContactIdByRelation($cid, 'Hoofdhuurder');
-                    if ($hoofdhurder_id) {
-                        CRM_Utils_DgwMutatieprocesUtils::addTag($tag_id, $hoofdhurder_id);
-                    }
-                    $medehuurder_id = CRM_Utils_DgwMutatieprocesUtils::getContactIdByRelation($cid, 'Medehuurder');
-                    if ($medehuurder_id) {
-                        CRM_Utils_DgwMutatieprocesUtils::addTag($tag_id, $medehuurder_id);
-                    }
-                }
-                $urlString = 'civicrm/contact/view/case';
-                $urlParams = "reset=1&id=".$case_id."&cid=".$cid."&action=view";
+                CRM_Mutatieproces_Property::setVgeFieldsCase($vge_nr, $result['id']);
+                CRM_Mutatieproces_PropertyContract::setHovFieldsCase($hov_nr, $result['id'], $expected_end_date);
             }
+            $urlString = 'civicrm/contact/view/case';
+            $urlParams = "reset=1&id=".$result['id']."&cid=".$cid."&action=view";
         }
         $session->replaceUserContext(CRM_Utils_System::url($urlString, $urlParams));
     }
