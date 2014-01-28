@@ -369,7 +369,7 @@ class CRM_Mutatieproces_PropertyContract {
         /*
          * retrieve custom group for huuropzegging
          */
-        $custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('huuropzegging');
+        $custom_group = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('huur_opzegging');
         $custom_table = $custom_group['table_name'];
         $hov_id_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hov_nr', $custom_group['id']);
         $hov_id_field_name = $hov_id_field['column_name'];
@@ -390,50 +390,61 @@ class CRM_Mutatieproces_PropertyContract {
          * retrieve hov_data
          */
         $hov_data = self::getPropertyContractWithHovId($hov_id);
-        if (isset($hov_data['hov_start_date'])) {
-            $start_date = CRM_Utils_DgwUtils::convertDMJString($hov_data['hov_start_date']);
-            $start_date_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hov_start_datum", $custom_group['id']);
-            $start_date_field_name = $start_date_field['column_name'];
-            $fields[] = $start_date_field_name." = '$start_date'";
+        if (!empty($hov_data)) {
+            if (isset($hov_data['hov_start_date'])) {
+                $start_date = CRM_Utils_DgwUtils::convertDMJString(date("d-m-Y", strtotime($hov_data['hov_start_date'])));
+                $start_date_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hov_start_datum", $custom_group['id']);
+                $start_date_field_name = $start_date_field['column_name'];
+                $fields[] = $start_date_field_name." = '$start_date'";
+            }
+            if (isset($hov_data['hov_hoofd_huurder_id'])) {
+                $params = array(
+                    'contact_id'    =>  $hov_data['hov_hoofd_huurder_id'],
+                    'return'        =>  "display_name"
+                );
+                $name = civicrm_api3('Contact', 'Getvalue', $params);
+                if (!empty($name)) {
+                    $name = CRM_Core_DAO::escapeString($name);
+                    $name_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_name", $custom_group['id']);
+                    $name_field_name = $name_field['column_name'];
+                    $fields[] = $name_field_name." = '$name'";
+                }
+                $persoons_nr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hov_data['hov_hoofd_huurder_id']);
+                $persoons_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_nr_first", $custom_group['id']);
+                $persoons_nr_field_name = $persoons_nr_field['column_name'];
+                $fields[] = $persoons_nr_field_name." = $persoons_nr";
+            }
+            if (isset($hov_data['hov_mede_huurder_id']) && !empty($hov_data['hov_mede_huurder_id'])) {
+                $params = array(
+                    'contact_id'    =>  $hov_data['hov_mede_huurder_id'],
+                    'return'        =>  "display_name"
+                );
+                $name = civicrm_api3('Contact', 'Getvalue', $params);
+                if (!empty($name)) {
+                    $name = CRM_Core_DAO::escapeString($name);
+                    $name_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_name", $custom_group['id']);
+                    $name_field_name = $name_field['column_name'];
+                    $fields[] = $name_field_name." = '$name'";
+                }
+                $persoons_nr = CRM_DgwUtils::getPersoonsnummerFirst($hov_data['hov_medehuurder_id']);
+                $persoons_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_nr_first", $custom_group['id']);
+                $persoons_nr_field_name = $persoons_nr_field['column_name'];
+                $fields[] = $persoons_nr_field_name." = $persoons_nr";
+            }
+            if (!empty($expected_end_date)) {
+                $end_date = CRM_Utils_DgwUtils::convertDMJString(date("d-m-Y", strtotime($expected_end_date)));
+                $end_date_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("verwachte_eind_datum", $custom_group['id']);
+                $end_date_field_name = $end_date_field['column_name'];
+                $fields[] = $end_date_field_name." = '$end_date'";                
+            }
+            $action_query = $action." $custom_table SET ".implode(", ", $fields);
+            if ($action == "UPDATE") {
+                $action_query_ .= " WHERE entity_id = $case_id";
+            }
+            if ($action == "INSERT INTO") {
+                $action_query .= ", entity_id = $case_id, $hov_id_field_name = $hov_id";
+            }
+            CRM_Core_DAO::executeQuery($action_query);
         }
-        if (isset($hov_data['hov_hoofd_huurder_id'])) {
-            $params = array(
-                'contact_id'    =>  $hov_data['hov_hoofd_huurder_id'],
-                'return'        =>  "display_name"
-            );
-            $contact_api = civicrm_api3('Contact', 'Getvalue', $params);
-            $name = CRM_Core_DAO::escapeString($contact_api['result']);
-            $name_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_name", $custom_group['id']);
-            $name_field_name = $name_field['column_name'];
-            $fields = $name_field_name." = '$name'";
-            $persoons_nr = CRM_DgwUtils::getPersoonsnummerFirst($hov_data['hov_hoofdhuurder_id']);
-            $persoons_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_nr_first", $custom_group['id']);
-            $persoons_nr_field_name = $persoons_nr_field['column_name'];
-            $fields[] = $persoons_nr_field_name." = $persoons_nr";
-        }
-        if (isset($hov_data['hov_mede_huurder_id'])) {
-            $params = array(
-                'contact_id'    =>  $hov_data['hov_mede_huurder_id'],
-                'return'        =>  "display_name"
-            );
-            $contact_api = civicrm_api3('Contact', 'Getvalue', $params);
-            $name = CRM_Core_DAO::escapeString($contact_api['result']);
-            $name_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_name", $custom_group['id']);
-            $name_field_name = $name_field['column_name'];
-            $fields = $name_field_name." = '$name'";
-            $persoons_nr = CRM_DgwUtils::getPersoonsnummerFirst($hov_data['hov_medehuurder_id']);
-            $persoons_nr_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_nr_first", $custom_group['id']);
-            $persoons_nr_field_name = $persoons_nr_field['column_name'];
-            $fields[] = $persoons_nr_field_name." = $persoons_nr";
-        }
-        $action_query = $action." $custom_table SET ".implode(", ", $fields);
-        if ($action == "UPDATE") {
-            $action_query_ .= " WHERE entity_id = $case_id";
-        }
-        if ($action == "INSERT INTO") {
-            $action_query .= ", entity_id = $case_id, $hov_id_field_name = $hov_id";
-        }
-        CRM_Core_DAO::executeQuery($action_query);
-    
     }
 }
