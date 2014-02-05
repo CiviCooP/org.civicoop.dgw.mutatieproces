@@ -337,7 +337,14 @@ function mutatieproces_civicrm_pageRun( &$page ) {
          * on contact_type
          */
         $huur_opzeggen = CRM_Utils_DgwMutatieprocesUtils::checkHovOpzeggen($contact_id, $contact_type);
-        if ($huur_opzeggen) {
+        /*
+         * Detemerine if the user has the role for testing huurovereenkomst opzeggen
+         */
+        $access = false;
+        if ( user_access('mutatieprocesdrupal_huuropzeggen')) {
+          $access = true; //user is allowed to access huuropzeggen
+        }
+        if ($huur_opzeggen && $access) {
             $page->assign('show_hov_opzeggen', '1');
             $page->assign('hov_opzeggen_contact_id', $contact_id);
         } else {
