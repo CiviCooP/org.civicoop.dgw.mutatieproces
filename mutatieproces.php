@@ -341,7 +341,7 @@ function mutatieproces_civicrm_pageRun( &$page ) {
          * Detemerine if the user has the role for testing huurovereenkomst opzeggen
          */
         $access = false;
-        if ( user_access('mutatieprocesdrupal_huuropzeggen')) {
+        if ( user_access('huuropzeggen')) {
           $access = true; //user is allowed to access huuropzeggen
         }
         if ($huur_opzeggen && $access) {
