@@ -92,7 +92,6 @@ function mutatieproces_civicrm_enable() {
     _mutatieproces_add_activity_type('Controleren gegevens compleet', 'Controleren of alle gegevens compleet zijn');
     _mutatieproces_add_activity_type('Voorbereiden contract', 'Huurcontract voorbereiden');
     _mutatieproces_add_activity_type('Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
-    _mutatieproces_add_activity_type('Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
     _mutatieproces_add_activity_type('Afmelden woonkeus', 'Eenheid afmelden bij woonkeus');
     $nw_dossier = _mutatieproces_add_case('Nieuwehuurdersdossier');
     $nw_gid = false;
