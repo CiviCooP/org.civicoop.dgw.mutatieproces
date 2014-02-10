@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * Creates a new permission in the drupal system to access huuropzeggen
+ */
+function mutatieprocesdrupal_permission() {
+  return array(
+    'huuropzeggen' => array(
+      'title' => t('Huuropzeggen'),
+      'description' => t('Mag huur opzeggen.'),
+    ),
+  );
+}
