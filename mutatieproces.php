@@ -25,12 +25,6 @@ function mutatieproces_civicrm_install() {
  * Implementation of hook_civicrm_uninstall
  */
 function mutatieproces_civicrm_uninstall() {
-    /*
-     * remove custom groups for extension
-     */
-    _mutatieproces_delete_custom_group('huur_opzegging');
-    _mutatieproces_delete_custom_group('vge');
-    _mutatieproces_delete_custom_group('woningwaardering');
     return _mutatieproces_civix_civicrm_uninstall();
 }
 /**
@@ -38,7 +32,10 @@ function mutatieproces_civicrm_uninstall() {
  * @author CiviCooP (helpdesk@civicoop.org)
  */
 function mutatieproces_civicrm_enable() {
-    _mutatieproces_add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', '', '');
+    /*
+     * add relationship, activities and case for huuropzegging
+     */
+    _mutatieproces_add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', 'Individual', '');
     _mutatieproces_add_activity_type('Adviesgesprek', 'Inplannen en afhandelen van een adviesgesprek');
     _mutatieproces_add_activity_type('Nakijken puntprijs', 'Puntprijs nakijken door HAI');
     _mutatieproces_add_activity_type('Afronden huuropzegging', "Afronden van de huuropzegging");
@@ -69,9 +66,9 @@ function mutatieproces_civicrm_enable() {
             _mutatieproces_add_custom_field($gid, 'vge_nr', 'VGE nummer First', 'String', 'Text', '1', '1');
             _mutatieproces_add_custom_field($gid, 'complex_nr', 'Complexnummer First', 'String', 'Text', '1', '2');
             _mutatieproces_add_custom_field($gid, 'vge_adres', 'VGE adres', 'String', 'Text', '1', '3');
-            _mutatieproces_add_custom_field($gid, 'vge_straat', 'Straat', 'String', 'Text', '0', '4');
-            _mutatieproces_add_custom_field($gid, 'vge_huis_nr', 'Huisnummer', 'String', 'Text', '0', '5');
-            _mutatieproces_add_custom_field($gid, 'vge_suffix', 'Toevoeging', 'String', 'Text', '0', '6');
+            _mutatieproces_add_custom_field($gid, 'vge_straat', 'Straat', 'String', 'Text', '1', '4');
+            _mutatieproces_add_custom_field($gid, 'vge_huis_nr', 'Huisnummer', 'String', 'Text', '1', '5');
+            _mutatieproces_add_custom_field($gid, 'vge_suffix', 'Toevoeging', 'String', 'Text', '1', '6');
             _mutatieproces_add_custom_field($gid, 'vge_postcode', 'Postcode', 'String', 'Text', '1', '7');
             _mutatieproces_add_custom_field($gid, 'vge_plaats', 'Plaats', 'String', 'Text', '1', '8');
         }
@@ -79,15 +76,63 @@ function mutatieproces_civicrm_enable() {
         if ($gid) {
             _mutatieproces_add_custom_field($gid, 'epa_label_opzegging', 'EPA label', 'String', 'Text', '1', '1');
             _mutatieproces_add_custom_field($gid, 'epa_pre_opzegging', 'EPA prelabel', 'String', 'Text', '1', '2');
-            _mutatieproces_add_custom_field($gid, 'woningoppervlakte', 'Totale woonoppervlakte', 'String', '1', '3');
+            _mutatieproces_add_custom_field($gid, 'woningoppervlakte', 'Totale woonoppervlakte', 'String', 'Text',  '1', '3');
         }
-        /*
-         * create custom data sets and fields for case type Nieuwe huurder
-         * This is the case where a new tenant moves into the house
-         */
     }
-
-	return _mutatieproces_civix_civicrm_enable();
+    unset($dossier, $gid);
+    /*
+     * create custom data sets and fields for case type Nieuwehuurder
+     * This is the case where a new tenant moves into the house
+     */
+    _mutatieproces_add_relationship_type('Verhuurconsulent is', 'Verhuurconsulent', 'Individual', '');
+    _mutatieproces_add_activity_type('Adverteren eenheid', 'Verhuurbare eenheid adverteren');
+    _mutatieproces_add_activity_type('Selecteren kandidaat', 'Eerstvolgende kandidaat selecteren uit lijst van kandidaten');
+    _mutatieproces_add_activity_type('Plannen bezichtiging', 'Plannen van een bezichtiging met vertrekkende huurder of consulent');
+    _mutatieproces_add_activity_type('Versturen aanbiedingsbrief', 'Maken en versturen van de aanbiedingsbrief');
+    _mutatieproces_add_activity_type('Controleren gegevens compleet', 'Controleren of alle gegevens compleet zijn');
+    _mutatieproces_add_activity_type('Voorbereiden contract', 'Huurcontract voorbereiden');
+    _mutatieproces_add_activity_type('Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
+    _mutatieproces_add_activity_type('Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
+    _mutatieproces_add_activity_type('Afmelden woonkeus', 'Eenheid afmelden bij woonkeus');
+    $nw_dossier = _mutatieproces_add_case('Nieuwehuurdersdossier');
+    $nw_gid = false;
+    if ($nw_dossier) {
+        /*
+         * create custom data sets and fields for case type Nieuwehuurder
+         */
+        $nw_gid = _mutatieproces_add_custom_group('nieuw_contract', 'Contract gegevens', $nw_dossier, 'Case');
+        if ($nw_gid) {
+            _mutatieproces_add_custom_field($nw_gid, 'nw_mutatie_nr', 'Mutatienummer First Noa', 'String', 'Text', '1', 1);
+            _mutatieproces_add_custom_field($nw_gid, 'nw_hov_nr', 'Huurovereenkomstnummer First Noa', 'String', 'Text', '1', 2);
+            _mutatieproces_add_custom_field($nw_gid, 'nw_hov_start_datum', 'Startdatum huurovereenkomst', 'Date', 'Select Date', '1', '3');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_hoofdhuurder_nr_first', 'Persoonsnummer hoofdhuurder', 'String', 'Text', '1', '4');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_hoofdhuurder_name', 'Naam hoofdhuurder', 'String', 'Text', '1', '5');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_medehuurder_nr_first', 'Persoonsnummer medehuurder', 'String', 'Text', '1', '6');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_medehuurder_name', 'Naam medehuurder', 'String', 'Text', '1', '7');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_verwachte_eind_datum', 'Verwachte einddatum', 'Date', 'Select Date', '1','8');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_plattegrond_opzegging', 'Plattegrond bij vorige mutatie', 'File', 'File' , '1', '9');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_opnamerapport_opzegging', 'Opnamerapport bij vorige mutatie', 'File', 'File', '1', '10');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_staat_oplevering_opzegging', 'Bijlage staat van oplevering', 'File', 'File', '1', '11');
+        }
+        $nw_gid = _mutatieproces_add_custom_group('nieuw_vge', 'VGE gegevens nieuw contract', $nw_dossier, 'Case');
+        if ($nw_gid) {
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_nr', 'VGE nummer First', 'String', 'Text', '1', '1');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_complex_nr', 'Complexnummer First', 'String', 'Text', '1', '2');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_adres', 'VGE adres', 'String', 'Text', '1', '3');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_straat', 'Straat', 'String', 'Text', '1', '4');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_huis_nr', 'Huisnummer', 'String', 'Text', '1', '5');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_suffix', 'Toevoeging', 'String', 'Text', '1', '6');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_postcode', 'Postcode', 'String', 'Text', '1', '7');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_vge_plaats', 'Plaats', 'String', 'Text', '1', '8');
+        }
+        $nw_gid = _mutatieproces_add_custom_group('nieuw_woningwaardering', 'Woningwaardering nieuw contract', $nw_dossier, 'Case');
+        if ($nw_gid) {
+            _mutatieproces_add_custom_field($nw_gid, 'nw_epa_label_opzegging', 'EPA label', 'String', 'Text', '1', '1');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_epa_pre_opzegging', 'EPA prelabel', 'String', 'Text', '1', '2');
+            _mutatieproces_add_custom_field($nw_gid, 'nw_woningoppervlakte', 'Totale woonoppervlakte', 'String', 'Text', '1', '3');
+        }
+    }
+    return _mutatieproces_civix_civicrm_enable();
 }
 
 /**
@@ -119,73 +164,6 @@ function mutatieproces_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 function mutatieproces_civicrm_managed(&$entities) {
   return _mutatieproces_civix_civicrm_managed($entities);
 }
-/**
- * Implementation of hook civicrm_navigationMenu
- * to create menu items
- * 
- * @author Erik Hommel (erik.hommel@civicoop.org http://www.civicoop.org)
- * @date 6 Jan 2014
- * @param array $params
- */
-function mutatieproces_civicrm_navigationMenu( &$params ) {
-    $maxKey = ( max( array_keys($params) ) );
-    $params[$maxKey+1] = array (
-        'attributes' => array (
-            'label'      => 'Testen Erik',
-            'name'       => 'Testen Erik',
-            'url'        => null,
-            'permission' => null,
-            'operator'   => null,
-            'separator'  => null,
-            'parentID'   => null,
-            'navID'      => $maxKey+1,
-            'active'     => 1
-    ),
-        'child' =>  array (
-            '1' => array (
-                'attributes' => array (
-                    'label'      => 'Testen Property class',
-                    'name'       => 'Testen Property class',
-                    'url'        => 'civicrm/proptest',
-                    'operator'   => null,
-                    'separator'  => 0,
-                    'parentID'   => $maxKey+1,
-                    'navID'      => 1,
-                    'active'     => 1
-                ),
-                'child' => null
-            ) 
-        ) 
-    );
-    $params[$maxKey+2] = array (
-        'attributes' => array (
-            'label'      => 'Laden gegevens vanuit First',
-            'name'       => 'Laden gegevens vanuit First',
-            'url'        => null,
-            'permission' => null,
-            'operator'   => null,
-            'separator'  => null,
-            'parentID'   => null,
-            'navID'      => $maxKey+2,
-            'active'     => 1
-    ),
-        'child' =>  array (
-            '1' => array (
-                'attributes' => array (
-                    'label'      => 'Laden vge gegevens',
-                    'name'       => 'Laden vge gegevens',
-                    'url'        => 'civicrm/vgeladen',
-                    'operator'   => null,
-                    'separator'  => 0,
-                    'parentID'   => $maxKey+2,
-                    'navID'      => 1,
-                    'active'     => 1
-                ),
-                'child' => null
-            ) 
-        ) 
-    );
-}
 function _mutatieproces_add_activity_type($type, $description) {
     $componentCase = 7; //activity type for civi case
     $param = array(
@@ -208,9 +186,12 @@ function _mutatieproces_add_relationship_type($name_a_b, $name_b_a, $contact_typ
     if (strlen($contact_type_b)) {
         $params['contact_type_b'] = $contact_type_b;
     }
-    $result = civicrm_api3('relationship_type', 'get', $params);
-    if ($result['is_error'] == 1 || $result['count'] == 0) {
-        $result = civicrm_api3('RelationshipType', 'Create', $params);
+    try {
+        $result = civicrm_api3('relationship_type', 'get', $params);
+        if (isset($result['count']) && $result['count'] == 0) {
+            civicrm_api3('RelationshipType', 'Create', $params);        
+        }        
+    } catch(CiviCRM_API3_Exception $e) {
     }
 }
 
@@ -228,14 +209,15 @@ function _mutatieproces_add_case($case) {
         'option_group_id'   =>  $option_group_id,
         'name'              =>  $case        
     );
-    $option_value = civicrm_api3('OptionValue', 'Getsingle', $params);
     $option_value_id = false;
     $option_value_value = false;
-    if (isset($option_value['id'])) {
-        $option_value_id = $option_value['id'];
-        $option_value_value = $option_value['value'];
-    }
-    if (!$option_value_id) {
+    try {
+        $option_value = civicrm_api3('OptionValue', 'Getsingle', $params);
+        if (isset($option_value['id'])) {
+            $option_value_id = $option_value['id'];
+            $option_value_value = $option_value['value'];
+        }
+    } catch (CiviCRM_API3_Exception $e) {
         $option_value = civicrm_api3('OptionValue', 'Create', $params);
         if (isset($option_value['id']) && is_array($option_value['values']) && count($option_value['values'])) {
             $v = reset($option_value['values']);
@@ -249,6 +231,7 @@ function _mutatieproces_add_case($case) {
 function _mutatieproces_add_custom_group($group, $group_title, $case_id, $extends) {
     try {
         $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
+        CRM_Core_Error::debug("result na get", $result);
         $gid = $result['id'];
     } catch(CiviCRM_API3_Exception $e) {
         $params = array(
@@ -259,6 +242,7 @@ function _mutatieproces_add_custom_group($group, $group_title, $case_id, $extend
             'is_active'                     =>  1
         );
         $result = civicrm_api3('CustomGroup', 'Create', $params);
+        CRM_Core_Error::debug("result na create", $result);
         $gid = $result['id'];
     }
     return $gid;
