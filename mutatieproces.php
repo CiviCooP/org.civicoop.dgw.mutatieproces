@@ -39,8 +39,8 @@ function mutatieproces_civicrm_uninstall() {
  */
 function mutatieproces_civicrm_enable() {
     _mutatieproces_add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', '', '');
-    _mutatieproces_add_activity_type('Adviesgesprek', 'Inplannen van een adviesgesprek');
-    _mutatieproces_add_activity_type('Eindgesprek', 'Inplannen van een eindgesprek');
+    _mutatieproces_add_activity_type('adviesgesprek_huuropzegging', 'Inplannen van een adviesgesprek');
+    _mutatieproces_add_activity_type('eindgesprek_huuropzegging', 'Inplannen van een eindgesprek');
     $dossier = _mutatieproces_add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
