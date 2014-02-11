@@ -32,14 +32,11 @@ function mutatieproces_civicrm_uninstall() {
  * @author CiviCooP (helpdesk@civicoop.org)
  */
 function mutatieproces_civicrm_enable() {
-    /*
-     * add relationship, activities and case for huuropzegging
-     */
     _mutatieproces_add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', 'Individual', '');
-    _mutatieproces_add_activity_type('Adviesgesprek', 'Inplannen en afhandelen van een adviesgesprek');
+    _mutatieproces_add_activity_type('adviesgesprek_huuropzegging', 'Inplannen en afhandelen van een adviesgesprek');
     _mutatieproces_add_activity_type('Nakijken puntprijs', 'Puntprijs nakijken door HAI');
     _mutatieproces_add_activity_type('Afronden huuropzegging', "Afronden van de huuropzegging");
-    _mutatieproces_add_activity_type('Eindgesprek', 'Inplannen en afhandelen van een eindgesprek');
+    _mutatieproces_add_activity_type('eindgesprek_huuropzegging', 'Inplannen en afhandelen van een eindgesprek');
     $dossier = _mutatieproces_add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
