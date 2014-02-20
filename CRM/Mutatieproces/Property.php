@@ -687,7 +687,10 @@ class CRM_Mutatieproces_Property {
             $action_query_vge .= " WHERE entity_id = $case_id";
         }
         if ($action == "INSERT INTO") {
-            $action_query_vge .= ", entity_id = $case_id, $vge_id_field_name = $vge_id";
+            if (count($fields)) {
+              $action_query_vge .= ",";
+            }
+            $action_query_vge .= " entity_id = $case_id, $vge_id_field_name = $vge_id";
         }
         CRM_Core_DAO::executeQuery($action_query_vge);
         /*
@@ -731,7 +734,10 @@ class CRM_Mutatieproces_Property {
             $action_query_ww .= " WHERE entity_id = $case_id";
         }
         if ($action == "INSERT INTO") {
-            $action_query_ww .= ", entity_id = $case_id";
+            if (count($fields)) {
+              $action_query_ww .= ",";
+            }
+            $action_query_ww .= " entity_id = $case_id";
         }
         CRM_Core_DAO::executeQuery($action_query_ww);
         
