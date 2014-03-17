@@ -78,6 +78,7 @@ class CRM_Mutatieproces_Property {
         $query_fields = $this->_setPropertyFields($params);
         if (!empty($query_fields)) {
             $query = "UPDATE ".$this->_table." SET ".implode(", ", $query_fields)." WHERE id = {$this->id}";
+            
             CRM_Core_DAO::executeQuery($query);
         }
     }
@@ -148,7 +149,7 @@ class CRM_Mutatieproces_Property {
         }
         
         if (isset($params[9])) {
-            $this->vge_postal_code = self::formatPostalCode($params[9]);
+            $this->vge_postal_code = CRM_Core_DAO::escapeString($params[9]);
             $result[] = "vge_postal_code = '{$this->vge_postal_code}'";
         }
         
@@ -197,7 +198,7 @@ class CRM_Mutatieproces_Property {
             if (is_numeric($params[12])) {
                 $this->build_year = $params[12];
             }
-            $result[] = "build_year = {$this->build_year}";
+            $result[] = "build_year = '{$this->build_year}'";
         }
        
         return $result;
@@ -478,31 +479,8 @@ class CRM_Mutatieproces_Property {
              */
             $custom_query = "SELECT * FROM $custom_group_table WHERE entity_id = $case_id";
             $dao_woningwaardering = CRM_Core_DAO::executeQuery($custom_query);
-            /*
-             * create record if no record found
-             */
-            if ($dao_woningwaardering->N == 0) {
-                $insert_fields = array();
+            while ($dao_woningwaardering->fetch()) {
                 foreach ($query_fields as $label => $field_name) {
-                    switch ($label) {
-                        case "epa_label_opzegging":
-                            $field_value = CRM_Core_DAO::escapeString($this->epa_label);
-                            break;
-                        case "epa_pre_opzegging":
-                            $field_value = CRM_Core_DAO::escapeString($this->epa_pre);
-                            break;
-                        case "woningoppervlakte":
-                            $field_value = $this->square_mtrs;
-                            break;
-                    }
-                    $insert_fields[] = $field_name." = '".$field_value."'";
-                }
-                if (!empty($insert_fields)) {
-                    $insert_query = "INSERT INTO $custom_group_table SET entity_id = $case_id, ".implode(", ", $insert_fields);
-                    CRM_Core_DAO::executeQuery($insert_query);
-                }
-            } else {
-                while ($dao_woningwaardering->fetch()) {
                     /*
                      * add every custom field to array
                      */
@@ -519,15 +497,17 @@ class CRM_Mutatieproces_Property {
                             break;
                     }
                     $update_fields[] = $field_name." = '".$field_value."'";
-                    /*
-                     * if elements in update_fields then update record
-                     */
-                    if (!empty($update_fields)) {
-                        $update_query = "UPDATE $custom_group_table SET ".implode(", ", $update_fields)." WHERE id = $dao_woningwaardering->id";
-                        CRM_Core_DAO::executeQuery($update_query);
-                    }
+                }
+                /*
+                 * if elements in update_fields then update record
+                 */
+                if (!empty($update_fields)) {
+                    $update_query = "UPDATE $custom_group_table SET ".implode(", ", $update_fields)." WHERE id = $dao_woningwaardering->id";
+                    $result[] = $update_query;
+                    CRM_Core_DAO::executeQuery($update_query);
                 }
             }
+            $result['is_error'] = 0;
         }       
     }
     /**
