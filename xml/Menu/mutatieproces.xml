@@ -5,34 +5,4 @@
     <title>Huurovereenkomst opzeggen</title>
     <page_callback>CRM_Contact_Form_Task_HOVOpzeggen</page_callback>
   </item>
-  <item>
-    <path>civicrm/hovladen</path>
-    <page_callback>CRM_Mutatieproces_Page_Hovladen</page_callback>
-    <title>Hovladen</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/hovcomplete</path>
-    <page_callback>CRM_Mutatieproces_Page_Hovcomplete</page_callback>
-    <title>Hovcomplete</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/proptest</path>
-    <page_callback>CRM_Mutatieproces_Page_Proptest</page_callback>
-    <title>Proptest</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/vgeladen</path>
-    <page_callback>CRM_Mutatieproces_Page_Vgeladen</page_callback>
-    <title>Vgeladen</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/vgecomplete</path>
-    <page_callback>CRM_Mutatieproces_Page_Vgecomplete</page_callback>
-    <title>Vgecomplete</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
 </menu>
