@@ -36,6 +36,8 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
        if (CRM_Core_DAO::checkTableExists('civicrm_propery')) {
            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property MODIFY COLUMN build_year CHAR(4)");
        }
+   if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
+       CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN type CHAR(1)");
+   }
        return TRUE;
    }
-}

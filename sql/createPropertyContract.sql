@@ -8,6 +8,7 @@ CREATE TABLE `civicrm_property_contract` (
   `hov_hoofd_huurder_id` int(11) DEFAULT NULL,
   `hov_mede_huurder_id` int(11) DEFAULT NULL,
   `hov_mutatie_id` int(15) DEFAULT NULL,
+  `type` char(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `hov_id` (`hov_id`),
