@@ -367,15 +367,31 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     }
   }
     /**
-     * Install the huuropzeggings dossier type and the custom fields
+     * Update 1001
+     * 
+     * @author Erik Hommel (CiviCooP)<erik.hommel@civicoop.org>
+     * @date 17 Mar 2014
      */
    public function upgrade_1001() {
        $this->ctx->log->info('Applying update 1001');
-       if (CRM_Core_DAO::checkTableExists('civicrm_propery')) {
+       if (CRM_Core_DAO::checkTableExists('civicrm_property')) {
            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property MODIFY COLUMN build_year CHAR(4)");
        }
        if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
            CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN type CHAR(1)");
+       }
+       return TRUE;
+   }
+    /**
+     * Update 1002
+     * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+     * @date 17 Mar 2014
+     */
+   public function upgrade_1002() {
+       $this->ctx->log->info('Applying update 1002');
+       if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
+           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract CHANGE hov_corr_name hov_name VARCHAR(128)");
+           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN hov_expected_end_date DATE");
        }
        return TRUE;
    }

@@ -201,7 +201,7 @@ function mutatieproces_civicrm_custom($op, $groupID, $entityID, &$params) {
        */
       require_once 'CRM/Mutatieproces/PropertyContract.php';
       $property_contract = new CRM_Mutatieproces_PropertyContract();
-      $contract_exists = $property_contract->checkContractExists($dao_hov->$hov_custom_field);
+      $contract_exists = $property_contract->checkHovIdExists($dao_hov->$hov_custom_field);
       if ($contract_exists) {
         $retrieved_contract = CRM_Mutatieproces_PropertyContract::getPropertyContractWithHovId($dao_hov->$hov_custom_field);
         $contract_data['id'] = $retrieved_contract['id'];
@@ -243,7 +243,7 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
             $result['hov_vge_id'] = $param['value'];
             break;
           case "Correspondentienaam_First":
-            $result['hov_corr_name'] = $param['value'];
+            $result['hov_name'] = $param['value'];
             break;
           case "Begindatum_HOV":
             $result['hov_start_date'] = $param['value'];
@@ -264,7 +264,7 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
             $result['hov_vge_id'] = $param['value'];
             break;
           case "naam_op_overeenkomst":
-            $result['hov_corr_name'] = $param['value'];
+            $result['hov_name'] = $param['value'];
             break;
           case "begindatum_overeenkomst":
             $result['hov_start_date'] = $param['value'];
@@ -277,6 +277,7 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
         }
         break;
     }
+    $result['type'] = "h";
   }
   return $result;
 }

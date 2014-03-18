@@ -11,8 +11,8 @@
  *   standard mailaddress (bestanden@degoedewoning.nl)
  * - ICT De Goede Woning puts all files send to mailadres on CiviCRM server in
  *   path /home/beheerder/first/
- * - API checks if file exists, reads and processes records and removes each record
- *   when processed
+ * - API checks if file exists, reads and processes records and deletes file
+ *   when processing is done
  *
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 17 Mar 2014
@@ -37,7 +37,7 @@ function civicrm_api3_property_load($params) {
          */
         $sf = fopen($sourceFile, "r");
         while (!feof($sf)) {
-            $sourceData = fgetcsv($sf, 0);
+            $sourceData = fgetcsv($sf, 0, ";");
             /*
              * ignore berging
              */
@@ -48,8 +48,8 @@ function civicrm_api3_property_load($params) {
                  * check if property exists, update if it does and
                  * create if it does not
                  */
-                $property_exists = $property->checkVgeIdExists($sourceData[0]);
-                if ($property_exists == TRUE) {
+                $propertyExists = $property->checkVgeIdExists($sourceData[0]);
+                if ($propertyExists == TRUE) {
                     $property->setIdWithVgeId($sourceData[0]);
                     $property->update($sourceData);
                 } else {
