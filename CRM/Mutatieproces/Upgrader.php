@@ -25,7 +25,7 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     } else {
       CRM_Core_Session::setStatus("Table civicrm_property already exists, please check if table needs cleaning", "info");
     }
-    
+
     $this->installHuuropzeggingsDossier();
     
     /**
@@ -157,21 +157,23 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
    * @date 17 Mar 2014
    */
-  protected function add_activity_type($type, $description) {
+  protected function add_activity_type($name, $label, $description) {
+    $option_group = 2; //activity type
     $componentCase = 7; //activity type for civi case
     $param = array(
-      'label' => $type,
+      'label' => $label,
+      'name' => $name,
       'description' => $description,
       'component_id' => $componentCase,
+      'option_group_id' => $option_group,
       'is_reserved' => true,
       'is_active' => 1,
       'weight' => 1,
     );
 
-    $result = civicrm_api3('ActivityType', 'get', array('label' => $type, 'component_id' => $componentCase));
-
+    $result = civicrm_api3('OptionValue', 'get', array('name' => $name, 'option_group_id' => $option_group, 'component_id' => $componentCase));
     if ($result['count'] == 0) {
-      civicrm_api3('ActivityType', 'Create', $param);
+      civicrm_api3('OptionValue', 'Create', $param);
     }
   }
 
