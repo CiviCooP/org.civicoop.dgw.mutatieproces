@@ -103,10 +103,10 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    */
   protected function installHuuropzeggingsDossier() {
     $this->add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', 'Individual', '');
-    $this->add_activity_type('adviesgesprek_huuropzegging', 'adviesgesprek_huuropzegging', 'Inplannen en afhandelen van een adviesgesprek');
+    $this->add_activity_type('adviesgesprek_huuropzegging', 'Adviesgesprek', 'Inplannen en afhandelen van een adviesgesprek');
     $this->add_activity_type('Nakijken puntprijs', 'Nakijken puntprijs', 'Puntprijs nakijken door HAI');
     $this->add_activity_type('Afronden huuropzegging', 'Afronden huuropzegging', "Afronden van de huuropzegging");
-    $this->add_activity_type('eindgesprek_huuropzegging', 'eindgesprek_huuropzegging', 'Inplannen en afhandelen van een eindgesprek');
+    $this->add_activity_type('eindgesprek_huuropzegging', 'Eindgesprek', 'Inplannen en afhandelen van een eindgesprek');
     $dossier = $this->add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
