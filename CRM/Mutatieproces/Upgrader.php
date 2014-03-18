@@ -373,10 +373,14 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    public function upgrade_1001() {
        $this->ctx->log->info('Applying update 1001');
        if (CRM_Core_DAO::checkTableExists('civicrm_property')) {
-           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property MODIFY COLUMN build_year CHAR(4)");
+           if (CRM_Core_DAO::checkFieldExists('civicrm_property', 'build_year')) {
+               CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property MODIFY COLUMN build_year CHAR(4)");
+           }
        }
        if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
-           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN type CHAR(1)");
+           if (!CRM_Core_DAO::checkFieldExists('civicrm_property_contract', 'type')) {
+               CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN type CHAR(1)");
+           }
        }
        return TRUE;
    }
@@ -388,8 +392,12 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    public function upgrade_1002() {
        $this->ctx->log->info('Applying update 1002');
        if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
-           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract CHANGE hov_corr_name hov_name VARCHAR(128)");
-           CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN hov_expected_end_date DATE");
+           if (CRM_Core_DAO::checkFieldExists('civicrm_property_contract', 'hov_corr_name')) {
+               CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract CHANGE hov_corr_name hov_name VARCHAR(128)");
+           }
+           if (!CRM_Core_DAO::checkFieldExists('civicrm_property_contract', 'hov_expected_end_date')) {
+               CRM_Core_DAO::executeQuery("ALTER TABLE civicrm_property_contract ADD COLUMN hov_expected_end_date DATE");
+           }
        }
        return TRUE;
    }
