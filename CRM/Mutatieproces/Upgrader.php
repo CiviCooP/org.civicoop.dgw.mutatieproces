@@ -47,14 +47,14 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    * This is the case where a new tenant moves into the house
    */
   $this->add_relationship_type('Verhuurconsulent is', 'Verhuurconsulent', 'Individual', '');
-  $this->add_activity_type('Adverteren eenheid', 'Verhuurbare eenheid adverteren');
-  $this->add_activity_type('Selecteren kandidaat', 'Eerstvolgende kandidaat selecteren uit lijst van kandidaten');
-  $this->add_activity_type('Plannen bezichtiging', 'Plannen van een bezichtiging met vertrekkende huurder of consulent');
-  $this->add_activity_type('Versturen aanbiedingsbrief', 'Maken en versturen van de aanbiedingsbrief');
-  $this->add_activity_type('Controleren gegevens compleet', 'Controleren of alle gegevens compleet zijn');
-  $this->add_activity_type('Voorbereiden contract', 'Huurcontract voorbereiden');
-  $this->add_activity_type('Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
-  $this->add_activity_type('Afmelden woonkeus', 'Eenheid afmelden bij woonkeus');
+  $this->add_activity_type('Adverteren eenheid', 'Adverteren eenheid', 'Verhuurbare eenheid adverteren');
+  $this->add_activity_type('Selecteren kandidaat', 'Selecteren kandidaat', 'Eerstvolgende kandidaat selecteren uit lijst van kandidaten');
+  $this->add_activity_type('Plannen bezichtiging', 'Plannen bezichtiging', 'Plannen van een bezichtiging met vertrekkende huurder of consulent');
+  $this->add_activity_type('Versturen aanbiedingsbrief', 'Versturen aanbiedingsbrief', 'Maken en versturen van de aanbiedingsbrief');
+  $this->add_activity_type('Controleren gegevens compleet', 'Controleren gegevens compleet', 'Controleren of alle gegevens compleet zijn');
+  $this->add_activity_type('Voorbereiden contract', 'Voorbereiden contract', 'Huurcontract voorbereiden');
+  $this->add_activity_type('Tekenen contract', 'Tekenen contract', 'Huurcontract tekenen met nieuwe huurder');
+  $this->add_activity_type('Afmelden woonkeus', 'Afmelden woonkeus', 'Eenheid afmelden bij woonkeus');
   $nw_dossier = $this->add_case('Nieuwehuurdersdossier');
   $nw_gid = false;
   if ($nw_dossier) {
@@ -103,10 +103,10 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    */
   protected function installHuuropzeggingsDossier() {
     $this->add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', 'Individual', '');
-    $this->add_activity_type('adviesgesprek_huuropzegging', 'Inplannen en afhandelen van een adviesgesprek');
-    $this->add_activity_type('Nakijken puntprijs', 'Puntprijs nakijken door HAI');
-    $this->add_activity_type('Afronden huuropzegging', "Afronden van de huuropzegging");
-    $this->add_activity_type('eindgesprek_huuropzegging', 'Inplannen en afhandelen van een eindgesprek');
+    $this->add_activity_type('adviesgesprek_huuropzegging', 'adviesgesprek_huuropzegging', 'Inplannen en afhandelen van een adviesgesprek');
+    $this->add_activity_type('Nakijken puntprijs', 'Nakijken puntprijs', 'Puntprijs nakijken door HAI');
+    $this->add_activity_type('Afronden huuropzegging', 'Afronden huuropzegging', "Afronden van de huuropzegging");
+    $this->add_activity_type('eindgesprek_huuropzegging', 'eindgesprek_huuropzegging', 'Inplannen en afhandelen van een eindgesprek');
     $dossier = $this->add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
