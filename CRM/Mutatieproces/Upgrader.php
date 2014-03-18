@@ -263,7 +263,6 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
   protected function add_custom_group($group, $group_title, $case_id, $extends) {
     try {
       $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
-      CRM_Core_Error::debug("result na get", $result);
       $gid = $result['id'];
     } catch (CiviCRM_API3_Exception $e) {
       $params = array(
@@ -274,7 +273,6 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
         'is_active' => 1
       );
       $result = civicrm_api3('CustomGroup', 'Create', $params);
-      CRM_Core_Error::debug("result na create", $result);
       $gid = $result['id'];
     }
     return $gid;
