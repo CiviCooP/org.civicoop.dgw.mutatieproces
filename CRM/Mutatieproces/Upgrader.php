@@ -32,6 +32,33 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
      * Install the dossier for nieuwe huurder
      */
     $this->installNieuweHuurderDossier();
+    
+    /**
+     * Install activity for woning waardering nakijken
+     */
+    $this->installWoningWaardering();
+  }
+  
+  /**
+   * Install activity for woning waardering
+   * 
+   * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+   * @date 17 Mar 2014 
+   */
+  protected function installWoningWaardering() {
+    $act_type_id = $this->add_activity_type("controle_woningwaardering", "Controleren woning waardering", "", false);
+    
+    //add custom field to record the remarks for a woning waardering on an adviesrapport or on an eindrapport
+    /*$advies_rapport = $this->get_activity_type_by_name('adviesgesprek_huuropzegging');
+    $eind_rapport =$this->get_activity_type_by_name('eindgesprek_huuropzegging');
+    $extends_entity_ids[] = $advies_rapport['id'];
+    $extends_entity_ids[] = $eind_rapport['id'];
+   
+    $extends_entity_ids = implode(CRM_Core_DAO::VALUE_SEPARATOR, $extends_entity_ids);
+    $gid = $this->add_custom_group('huuropzeg_woningwaard_rapport', 'Woningwaardering', $extends_entity_ids, 'Activity');
+    if ($gid) {
+      $this->add_custom_field($gid, 'huuropzeg_woningwaard_opm', 'Opmerkingen tbv woningwaardering', 'Memo', 'TextArea', '1', 1);
+    }*/
   }
 
   
@@ -151,30 +178,59 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
   /**
    * Add an activity type to the system
    * 
-   * @param type $type
-   * @param type $description
+   * @param string $name
+   * @param string $label
+   * @param string $description
+   * @param bool $caseActivity - optional, default true, when set this activity type is used for case activities
    * 
    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
    * @date 17 Mar 2014
    */
-  protected function add_activity_type($name, $label, $description) {
+  protected function add_activity_type($name, $label, $description, $caseActivity=true) {
     $option_group = 2; //activity type
     $componentCase = 7; //activity type for civi case
     $param = array(
       'label' => $label,
       'name' => $name,
       'description' => $description,
-      'component_id' => $componentCase,
       'option_group_id' => $option_group,
       'is_reserved' => true,
       'is_active' => 1,
       'weight' => 1,
     );
-
-    $result = civicrm_api3('OptionValue', 'get', array('name' => $name, 'option_group_id' => $option_group, 'component_id' => $componentCase));
-    if ($result['count'] == 0) {
-      civicrm_api3('OptionValue', 'Create', $param);
+    if ($caseActivity) {
+      $param['component_id'] = $componentCase;
     }
+    
+    $getParams['name'] = $name;
+    $getParams['option_group_id'] = $option_group;
+    if ($caseActivity) {
+      $getParams['component_id'] = $componentCase;
+    }
+    $result = civicrm_api3('OptionValue', 'get', $getParams);
+    if ($result['count'] == 0) {
+      $result = civicrm_api3('OptionValue', 'Create', $param);
+    }
+    if (isset($result['id'])) {
+      return $result['id'];
+    }
+    return false;
+  }
+  
+  /**
+   * Returns the details of an activity type from the option value api
+   * 
+   * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+   * @date 18 Mar 2014
+   * @param string $name
+   * @return array
+   */
+  protected function get_activity_type_by_name($name) {
+    $option_group = 2; //activity type
+    $getParams['name'] = $name;
+    $getParams['option_group_id'] = $option_group;
+    $result = civicrm_api3('OptionValue', 'getsingle', $getParams);
+    return $result;
   }
 
   /**
@@ -255,14 +311,14 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    * 
    * @param type $group
    * @param type $group_title
-   * @param type $case_id
+   * @param type $extends_entity_ids
    * @param type $extends
    * @return type
    * 
    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
    * @date 17 Mar 2014
    */
-  protected function add_custom_group($group, $group_title, $case_id, $extends) {
+  protected function add_custom_group($group, $group_title, $extends_entity_ids, $extends, $collapse=true) {
     try {
       $result = civicrm_api3('CustomGroup', 'Getsingle', array('name' => $group));
       $gid = $result['id'];
@@ -271,7 +327,8 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
         'name' => $group,
         'title' => $group_title,
         'extends' => $extends,
-        'extends_entity_column_value' => $case_id,
+        'extends_entity_column_value' => $extends_entity_ids,
+        'collapse_display' => $collapse ? '1' : '0',
         'is_active' => 1
       );
       $result = civicrm_api3('CustomGroup', 'Create', $params);
@@ -402,5 +459,16 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
            }
        }
        return TRUE;
+   }
+   
+   /**
+    * Update 1003
+    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+    * @date 18 Mar 2014
+    */
+   public function upgrade_1003() {
+     $this->ctx->log->info('Applying update 1003: installing activity for woning waardering');
+     $this->installWoningWaardering();
+     return TRUE;
    }
 }
