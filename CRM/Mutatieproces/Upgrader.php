@@ -36,29 +36,25 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     /**
      * Install activity for woning waardering nakijken
      */
-    $this->installWoningWaardering();
+    $this->installInfoAfdVerhuur();
   }
   
   /**
-   * Install activity for woning waardering
+   * Install custom fields for afdeling verhuur. Those fields are used for common remarks
    * 
    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
    * @date 17 Mar 2014 
    */
-  protected function installWoningWaardering() {
-    $act_type_id = $this->add_activity_type("controle_woningwaardering", "Controleren woning waardering", "", false);
-    
-    //add custom field to record the remarks for a woning waardering on an adviesrapport or on an eindrapport
-    /*$advies_rapport = $this->get_activity_type_by_name('adviesgesprek_huuropzegging');
-    $eind_rapport =$this->get_activity_type_by_name('eindgesprek_huuropzegging');
-    $extends_entity_ids[] = $advies_rapport['id'];
-    $extends_entity_ids[] = $eind_rapport['id'];
+  protected function installInfoAfdVerhuur() {    
+    $huuropzegging = $this->get_case_type_by_name('Huuropzeggingsdossier');
+    $extends_entity_ids[] = $huuropzegging['value'];
    
-    $extends_entity_ids = implode(CRM_Core_DAO::VALUE_SEPARATOR, $extends_entity_ids);
-    $gid = $this->add_custom_group('huuropzeg_woningwaard_rapport', 'Woningwaardering', $extends_entity_ids, 'Activity');
+    //$extends_entity_ids = implode(CRM_Core_DAO::VALUE_SEPARATOR, $extends_entity_ids);
+    $extends_entity_ids = implode(",", $extends_entity_ids);
+    $gid = $this->add_custom_group('info_afd_verhuur', 'Info tbv afdeling verhuur', $extends_entity_ids, 'Case', false);
     if ($gid) {
-      $this->add_custom_field($gid, 'huuropzeg_woningwaard_opm', 'Opmerkingen tbv woningwaardering', 'Memo', 'TextArea', '1', 1);
-    }*/
+      $this->add_custom_field($gid, 'huuropzeg_rapport', 'Opm. vanuit advies- of eindgesprek', 'Memo', 'TextArea', 1, 1);
+    }
   }
 
   
@@ -232,6 +228,25 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     $result = civicrm_api3('OptionValue', 'getsingle', $getParams);
     return $result;
   }
+  
+  /**
+   * Returns the details of a case type from the option value api.
+   * 
+   * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+   * @date 19 Mar 2014
+   * @param string $name
+   * @return array
+   */
+  protected function get_case_type_by_name($name) {
+    $option_group_result = civicrm_api3('OptionGroup', 'getsingle', array('name' => 'case_type'));
+    $option_group = false;
+    if (isset($option_group_result['id'])) {
+      $getParams['option_group_id'] = $option_group_result['id'];
+    }
+    $getParams['name'] = $name;
+    $result = civicrm_api3('OptionValue', 'getsingle', $getParams);
+    return $result;
+  }
 
   /**
    * Add a relationship type to the system
@@ -373,7 +388,7 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
 
       $params2 = array(
         'label' => $label,
-        'active' => $active,
+        'is_active' => $active,
         'id' => $result['id']
       );
       civicrm_api3('CustomField', 'Create', $params2);
@@ -468,7 +483,7 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     */
    public function upgrade_1003() {
      $this->ctx->log->info('Applying update 1003: installing activity for woning waardering');
-     $this->installWoningWaardering();
+     $this->installInfoAfdVerhuur();
      return TRUE;
    }
 }
