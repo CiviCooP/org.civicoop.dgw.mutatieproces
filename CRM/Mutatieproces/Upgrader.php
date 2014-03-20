@@ -47,8 +47,6 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    * This is the case where a new tenant moves into the house
    */
   $this->add_relationship_type('Verhuurconsulent is', 'Verhuurconsulent', 'Individual', '');
-  $this->add_activity_type('Adverteren eenheid', 'Verhuurbare eenheid adverteren');
-  $this->add_activity_type('Selecteren kandidaat', 'Eerstvolgende kandidaat selecteren uit lijst van kandidaten');
   $this->add_activity_type('Plannen bezichtiging', 'Plannen van een bezichtiging met vertrekkende huurder of consulent');
   $this->add_activity_type('Versturen aanbiedingsbrief', 'Maken en versturen van de aanbiedingsbrief');
   $this->add_activity_type('Controleren gegevens compleet', 'Controleren of alle gegevens compleet zijn');
@@ -61,20 +59,6 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     /*
      * create custom data sets and fields for case type Nieuwehuurder
      */
-    $nw_gid = $this->add_custom_group('nieuw_contract', 'Contract gegevens', $nw_dossier, 'Case');
-    if ($nw_gid) {
-      $this->add_custom_field($nw_gid, 'nw_mutatie_nr', 'Mutatienummer First Noa', 'String', 'Text', '1', 1);
-      $this->add_custom_field($nw_gid, 'nw_hov_nr', 'Huurovereenkomstnummer First Noa', 'String', 'Text', '1', 2);
-      $this->add_custom_field($nw_gid, 'nw_hov_start_datum', 'Startdatum huurovereenkomst', 'Date', 'Select Date', '1', '3');
-      $this->add_custom_field($nw_gid, 'nw_hoofdhuurder_nr_first', 'Persoonsnummer hoofdhuurder', 'String', 'Text', '1', '4');
-      $this->add_custom_field($nw_gid, 'nw_hoofdhuurder_name', 'Naam hoofdhuurder', 'String', 'Text', '1', '5');
-      $this->add_custom_field($nw_gid, 'nw_medehuurder_nr_first', 'Persoonsnummer medehuurder', 'String', 'Text', '1', '6');
-      $this->add_custom_field($nw_gid, 'nw_medehuurder_name', 'Naam medehuurder', 'String', 'Text', '1', '7');
-      $this->add_custom_field($nw_gid, 'nw_verwachte_eind_datum', 'Verwachte einddatum', 'Date', 'Select Date', '1', '8');
-      $this->add_custom_field($nw_gid, 'nw_plattegrond_opzegging', 'Plattegrond bij vorige mutatie', 'File', 'File', '1', '9');
-      $this->add_custom_field($nw_gid, 'nw_opnamerapport_opzegging', 'Opnamerapport bij vorige mutatie', 'File', 'File', '1', '10');
-      $this->add_custom_field($nw_gid, 'nw_staat_oplevering_opzegging', 'Bijlage staat van oplevering', 'File', 'File', '1', '11');
-    }
     $nw_gid = $this->add_custom_group('nieuw_vge', 'VGE gegevens nieuw contract', $nw_dossier, 'Case');
     if ($nw_gid) {
       $this->add_custom_field($nw_gid, 'nw_vge_nr', 'VGE nummer First', 'String', 'Text', '1', '1');
