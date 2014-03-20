@@ -661,7 +661,16 @@ class CRM_Mutatieproces_Property {
             $addressFieldName = $addressField['column_name'];
             $fields[] = $addressFieldName." = '$address'";
         }
-        $actionQueryVge = $action." $customTable SET ".implode(", ", $fields)." WHERE entity_id = $caseId";
+        
+        $actionQueryVge = $action." $customTable SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+          $actionQueryVge .= " WHERE entity_id = $caseId";
+        } elseif ($action == "INSERT INTO") {
+           if (count($fields)) {
+            $actionQueryVge .= ",";
+          }
+          $actionQueryVge .= " entity_id = $caseId, $vgeIdFieldName = $vgeId";
+        }
         CRM_Core_DAO::executeQuery($actionQueryVge);
         /*
          * retrieve custom group for woningwaardering
