@@ -597,6 +597,19 @@ class CRM_Mutatieproces_Property {
         $customTable = $customGroup['table_name'];
         $vgeIdField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('vge_nr', $customGroup['id']);
         $vgeIdFieldName = $vgeIdField['column_name'];
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $query_vge = "SELECT COUNT(*) AS count_vge  FROM $custom_table WHERE entity_id = $case_id AND $vge_id_field_name = $vge_id";
+        $dao_vge = CRM_Core_DAO::executeQuery($query_vge);
+        if ($dao_vge->fetch()) {
+          if ($dao_vge->count_vge == 0) {
+            $action = "INSERT INTO";
+          } else {
+            $action = "UPDATE";
+            
+          }
+        }
         $fields = array();
         /*
          * retrieve vge_data
