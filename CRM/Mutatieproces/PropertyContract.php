@@ -11,6 +11,7 @@
  */
 class CRM_Mutatieproces_PropertyContract {
     private $_table = "";
+    public $id = 0;
     public $hovId = 0;
     public $vgeId = 0;
     public $hoofdHuurderId = 0;
@@ -20,7 +21,7 @@ class CRM_Mutatieproces_PropertyContract {
     public $expectedEndDate = "";
     public $type = "";
     public $hovName = "";
-    public $mutatieId;
+    public $mutatieId = 0;
     /**
      * constructor
      */
@@ -71,7 +72,6 @@ class CRM_Mutatieproces_PropertyContract {
             $query = "INSERT INTO " . $this->_table . " SET " . implode(", ", $insertFields);
             CRM_Core_DAO::executeQuery($query);
         }
-        exit();
     }
     /**
      * Function to update a record in civicrm_property_contract
@@ -87,7 +87,7 @@ class CRM_Mutatieproces_PropertyContract {
          * update record if required
          */
         if (!empty($updateFields)) {
-            $query = "UPDATE " . $this->_table . " SET " . implode(", ", $updateFields);
+            $query = "UPDATE " . $this->_table . " SET " . implode(", ", $updateFields)." WHERE id = {$this->id}";
             CRM_Core_DAO::executeQuery($query);
         }
     }
@@ -310,7 +310,19 @@ class CRM_Mutatieproces_PropertyContract {
         $customTable = $customGroup['table_name'];
         $hovIdField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hov_nr', $customGroup['id']);
         $hovIdFieldName = $hovIdField['column_name'];
-        $fields[] = $hovIdFieldName." = '$hovId'";
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $queryOpzegging = "SELECT COUNT(*) AS count_opzegging  FROM $customTable WHERE entity_id = $caseId AND $hovIdFieldName = $hovId";
+        $daoOpzegging = CRM_Core_DAO::executeQuery($queryOpzegging);
+        if ($daoOpzegging->fetch()) {
+          if ($queryOpzegging->count_opzegging == 0) {
+            $action = "INSERT INTO";
+          } else {
+            $action = "UPDATE";
+            
+          }
+        }
         /*
          * retrieve hov_data
          */
@@ -334,6 +346,7 @@ class CRM_Mutatieproces_PropertyContract {
                     $nameFieldName = $nameField['column_name'];
                     $fields[] = $nameFieldName . " = '$name'";
                 }
+                require_once 'CRM/Utils/DgwUtils.php';
                 $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_hoofd_huurder_id']);
                 $persoonsNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_nr_first", $customGroup['id']);
                 $persoonsNrFieldName = $persoonsNrField['column_name'];
@@ -363,7 +376,15 @@ class CRM_Mutatieproces_PropertyContract {
                 $fields[] = $expectedEndDateFieldName . " = '$expectedEndDate'";
             }
         }
-        $actionQuery = "UPDATE $customTable SET " . implode(", ", $fields)." WHERE entity_id = $caseId";
+        $actionQuery = $action." $customTable SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+          $actionQuery .= " WHERE entity_id = $caseId";
+        } elseif ($action == "INSERT INTO") {
+           if (count($fields)) {
+            $actionQuery .= ",";
+          }
+          $actionQuery .= " entity_id = $caseId, $hovIdFieldName = $hovId";
+        }
         CRM_Core_DAO::executeQuery($actionQuery);
     }
     /**
@@ -446,13 +467,12 @@ class CRM_Mutatieproces_PropertyContract {
         /*
          * get custom field names
          */
-        $hovFields = array("hov_start_datum", "mutatie_nr", "hoodhuurder_nr_first", "hoofdhuurder_name", "medehuurder_nr_first", "medehuurder_name");
+        $hovFields = array("hov_start_datum", "mutatie_nr", "hoofdhuurder_nr_first", "hoofdhuurder_name", "medehuurder_nr_first", "medehuurder_name");
         $queryFields = array();
         foreach ($hovFields as $hovField) {
             $customField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName($hovField, $customGroupId);
             $queryFields[$hovField] = $customField['column_name'];
         }
-        
         $customQuery = "SELECT * FROM $customGroupTable WHERE $hovIdColumn = {$this->hovId}";
         $daoHov = CRM_Core_DAO::executeQuery($customQuery);
         while ($daoHov->fetch()) {
@@ -468,7 +488,7 @@ class CRM_Mutatieproces_PropertyContract {
                     case "hov_start_datum":
                         $fieldValue = CRM_Utils_DgwUtils::convertDMJString(date("d-m-Y", strtotime($this->startDate)));
                         break;
-                    case "hoofduurder_nr_first":
+                    case "hoofdhuurder_nr_first":
                         $fieldValue = CRM_Core_DAO::escapeString($this->hoofdHuurderId);
                         break;
                     case "hoofdhuurder_name":
@@ -518,6 +538,26 @@ class CRM_Mutatieproces_PropertyContract {
             }
         }
         $result['is_error'] = 0;
+        return $result;
+    }
+    /**
+     * Function to set id with hovId
+     * 
+     * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+     * @date 18 Mar 2014
+     * @param int $hovId
+     * @return void
+     * @access public
+     */
+    public function setIdWithHovId($hovId) {
+        if (!empty($hovId) && is_numeric($hovId)) {
+            $query = "SELECT id FROM ".$this->_table." WHERE hov_id = $hovId";
+            $dao = CRM_Core_DAO::executeQuery($query);
+            if ($dao->fetch()) {
+                $this->id = $dao->id;
+            }
+        }
+       
     }
     /**
      * function to set fields based on incoming params
@@ -569,8 +609,10 @@ class CRM_Mutatieproces_PropertyContract {
         }
         
         if (isset($params[13])) {
-            $this->mutatieId = $params[13];
-            $result[] = "hov_mutatie_id = {$this->mutatieId}";
+            if (!empty($params[13]) && is_numeric($params[13])) {
+                $this->mutatieId = $params[13];
+                $result[] = "hov_mutatie_id = {$this->mutatieId}";
+            }
         }
         
         if (isset($params[14])) {
