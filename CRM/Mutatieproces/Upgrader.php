@@ -110,10 +110,10 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    */
   protected function installHuuropzeggingsDossier() {
     $this->add_relationship_type('Technisch woonconsulent is', 'Technisch woonconsulent', 'Individual', '');
-    $this->add_activity_type('adviesgesprek_huuropzegging', 'Adviesgesprek', 'Inplannen en afhandelen van een adviesgesprek');
+    $this->add_activity_type('adviesgesprek_huuropzegging', 'Vooropname', 'Inplannen en afhandelen van een vooropname');
     $this->add_activity_type('Nakijken puntprijs', 'Nakijken puntprijs', 'Puntprijs nakijken door HAI');
     $this->add_activity_type('Afronden huuropzegging', 'Afronden huuropzegging', "Afronden van de huuropzegging");
-    $this->add_activity_type('eindgesprek_huuropzegging', 'Eindgesprek', 'Inplannen en afhandelen van een eindgesprek');
+    $this->add_activity_type('eindgesprek_huuropzegging', 'Eindopname', 'Inplannen en afhandelen van een eindopname');
     $dossier = $this->add_case('Huuropzeggingsdossier');
     $gid = false;
     if ($dossier) {
@@ -152,6 +152,36 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
         $this->add_custom_field($gid, 'epa_pre_opzegging', 'EPA prelabel', 'String', 'Text', '1', '2');
         $this->add_custom_field($gid, 'woningoppervlakte', 'Totale woonoppervlakte', 'String', 'Text', '1', '3');
       }
+    }
+  }
+  
+  /**
+   * Alter an activity type to the system
+   * 
+   * @param string $name
+   * @param string $label
+   * @param string $description
+   * 
+   * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+   * @date 20 Mar 2014
+   */
+  protected function alter_activity_type($name, $label, $description) {
+    $option_group = 2; //activity type
+    $param = array(
+      'label' => $label,
+      'description' => $description,
+      'option_group_id' => $option_group,
+    );
+    
+    $getParams['name'] = $name;
+    $getParams['option_group_id'] = $option_group;
+    $result = civicrm_api3('OptionValue', 'get', $getParams);
+    if ($result['count'] == 0) {
+      return;
+    }
+    if (isset($result['id'])) {
+      $param['id'] = $result['id'];
+      civicrm_api3('OptionValue', 'Create', $param);
     }
   }
 
