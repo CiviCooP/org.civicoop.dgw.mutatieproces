@@ -597,6 +597,19 @@ class CRM_Mutatieproces_Property {
         $customTable = $customGroup['table_name'];
         $vgeIdField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('vge_nr', $customGroup['id']);
         $vgeIdFieldName = $vgeIdField['column_name'];
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $query_vge = "SELECT COUNT(*) AS count_vge  FROM $customTable WHERE entity_id = $caseId AND $vgeIdFieldName = $vgeId";
+        $dao_vge = CRM_Core_DAO::executeQuery($query_vge);
+        if ($dao_vge->fetch()) {
+          if ($dao_vge->count_vge == 0) {
+            $action = "INSERT INTO";
+          } else {
+            $action = "UPDATE";
+            
+          }
+        }
         $fields = array();
         /*
          * retrieve vge_data
@@ -648,7 +661,16 @@ class CRM_Mutatieproces_Property {
             $addressFieldName = $addressField['column_name'];
             $fields[] = $addressFieldName." = '$address'";
         }
-        $actionQueryVge = $action." $customTable SET ".implode(", ", $fields)." WHERE entity_id = $caseId";
+        
+        $actionQueryVge = $action." $customTable SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+          $actionQueryVge .= " WHERE entity_id = $caseId";
+        } elseif ($action == "INSERT INTO") {
+           if (count($fields)) {
+            $actionQueryVge .= ",";
+          }
+          $actionQueryVge .= " entity_id = $caseId, $vgeIdFieldName = $vgeId";
+        }
         CRM_Core_DAO::executeQuery($actionQueryVge);
         /*
          * retrieve custom group for woningwaardering
