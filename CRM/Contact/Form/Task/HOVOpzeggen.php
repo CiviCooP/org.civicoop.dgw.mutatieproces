@@ -100,9 +100,8 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
             foreach($this->_custom_values as $id => $value) {
                 /*
                  * only if allowed
-                 */
-                $add_option = CRM_Utils_DgwMutatieprocesUtils::checkHovOpzeggen($contact_id, "Household");
-                if ($add_option == TRUE) {
+                 */                
+                if (empty($value['Einddatum_HOV'])) {
                     $hovs->addOption($value['VGE_adres_First'].' (HOV: '.$value['HOV_nummer_First'].', VGE: '.$value['VGE_nummer_First'].')', $id);
                 }
             }
