@@ -677,6 +677,19 @@ class CRM_Mutatieproces_Property {
          */
         $customGroup = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName('woningwaardering');
         $customTable = $customGroup['table_name'];
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $queryWw = "SELECT COUNT(*) AS count_ww  FROM $customTable WHERE entity_id = $caseId";
+        $daoWW = CRM_Core_DAO::executeQuery($queryWw);
+        if ($daoWW->fetch()) {
+          if ($daoWW->count_ww == 0) {
+            $action = "INSERT INTO";
+          } else {
+            $action = "UPDATE";
+            
+          }
+        }
         $fields = array();
         if (isset($vgeData['epa_label'])) {
             $epaLabel = CRM_Core_DAO::escapeString($vgeData['epa_label']);
@@ -696,7 +709,15 @@ class CRM_Mutatieproces_Property {
             $squareMtrsFieldName = $squareMtrsField['column_name'];
             $fields[] = $squareMtrsFieldName." = '$squareMtrs'";
         }
-        $actionQueryWw = "UPDATE $customTable SET ".implode(", ", $fields)." WHERE entity_id = $caseId";
+        $actionQueryWw = $action." $customTable SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+          $actionQueryWw .= " WHERE entity_id = $caseId";
+        } elseif ($action == "INSERT INTO") {
+           if (count($fields)) {
+            $actionQueryWw .= ",";
+          }
+          $actionQueryWw .= " entity_id = $caseId";
+        }
         CRM_Core_DAO::executeQuery($actionQueryWw);
         
     }

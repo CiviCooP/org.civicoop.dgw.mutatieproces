@@ -310,7 +310,19 @@ class CRM_Mutatieproces_PropertyContract {
         $customTable = $customGroup['table_name'];
         $hovIdField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('hov_nr', $customGroup['id']);
         $hovIdFieldName = $hovIdField['column_name'];
-        $fields[] = $hovIdFieldName." = '$hovId'";
+        /*
+         * check if already record for case and set action update or insert
+         */
+        $queryOpzegging = "SELECT COUNT(*) AS count_opzegging  FROM $customTable WHERE entity_id = $caseId AND $hovIdFieldName = $hovId";
+        $daoOpzegging = CRM_Core_DAO::executeQuery($queryOpzegging);
+        if ($daoOpzegging->fetch()) {
+          if ($queryOpzegging->count_opzegging == 0) {
+            $action = "INSERT INTO";
+          } else {
+            $action = "UPDATE";
+            
+          }
+        }
         /*
          * retrieve hov_data
          */
@@ -334,6 +346,7 @@ class CRM_Mutatieproces_PropertyContract {
                     $nameFieldName = $nameField['column_name'];
                     $fields[] = $nameFieldName . " = '$name'";
                 }
+                require_once 'CRM/Utils/DgwUtils.php';
                 $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_hoofd_huurder_id']);
                 $persoonsNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_nr_first", $customGroup['id']);
                 $persoonsNrFieldName = $persoonsNrField['column_name'];
@@ -363,7 +376,15 @@ class CRM_Mutatieproces_PropertyContract {
                 $fields[] = $expectedEndDateFieldName . " = '$expectedEndDate'";
             }
         }
-        $actionQuery = "UPDATE $customTable SET " . implode(", ", $fields)." WHERE entity_id = $caseId";
+        $actionQuery = $action." $customTable SET ".implode(", ", $fields);
+        if ($action == "UPDATE") {
+          $actionQuery .= " WHERE entity_id = $caseId";
+        } elseif ($action == "INSERT INTO") {
+           if (count($fields)) {
+            $actionQuery .= ",";
+          }
+          $actionQuery .= " entity_id = $caseId, $hovIdFieldName = $hovId";
+        }
         CRM_Core_DAO::executeQuery($actionQuery);
     }
     /**
