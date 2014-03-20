@@ -600,7 +600,7 @@ class CRM_Mutatieproces_Property {
         /*
          * check if already record for case and set action update or insert
          */
-        $query_vge = "SELECT COUNT(*) AS count_vge  FROM $custom_table WHERE entity_id = $caseId AND $vgeIdFieldName = $vgeId";
+        $query_vge = "SELECT COUNT(*) AS count_vge  FROM $customTable WHERE entity_id = $caseId AND $vgeIdFieldName = $vgeId";
         $dao_vge = CRM_Core_DAO::executeQuery($query_vge);
         if ($dao_vge->fetch()) {
           if ($dao_vge->count_vge == 0) {
