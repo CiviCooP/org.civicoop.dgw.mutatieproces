@@ -282,3 +282,99 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
   }
   return $result;
 }
+
+/**
+ * Implementation of hook_civicrm_tokens
+ * Deze hook gebruiken we om de volgende tokens kenbaar te maken aan het systeem
+ * - mutatie.eindopname: datum van de eindopname/onbekend als die niet gevonden kan worden
+ * 
+ * 
+ * @param array $tokens
+ */
+function mutatieproces_civicrm_tokens(&$tokens) {
+  $tokens['mutatieproces'] = array (
+    'mutatieproces.eindopname' => 'Datum eindopname (indien bekend)',
+  );
+}
+
+/**
+ * implementation of hook_civicrm_tokenValues
+ * 
+ * This function deletegates the tokens to the desired functions
+ * 
+ * @param type $values
+ * @param type $cids
+ * @param type $job
+ * @param type $tokens
+ * @param type $context
+ */
+function mutatieproces_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+  if (!empty($tokens['mutatieproces'])) {
+    if (in_array('eindopname', $tokens['mutatieproces'])) {
+       mutatieproces_token_eindopname($values, $cids, $job, $tokens, $context);
+    }
+  } elseif (is_array($tokens) && count($tokens) == 0) {
+    mutatieproces_token_eindopname($values, $cids, $job, $tokens, $context);
+  }
+}
+
+/**
+ * implementation of hook: mutatieproces.eindopname
+ * 
+ * This function deletegates the tokens to the desired functions
+ * 
+ * @param type $values
+ * @param type $cids
+ * @param type $job
+ * @param type $tokens
+ * @param type $context
+ */
+function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+  $contacts = $cids;
+  $use_array = true;
+  if (!is_array($contacts) && !empty($cids)) {
+    $contacts = array($cids);
+    $use_array = false;
+  }
+  if (count($contacts) == 0) {
+    return;
+  }
+  
+  $act_type_group = civicrm_api3('OptionGroup', 'getsingle', array('name' => 'activity_type'));
+  $gid = $act_type_group['id'];
+  $activity_type = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $gid, 'name' => 'eindgesprek_huuropzegging'));
+  $activity_type_id = $activity_type['value'];
+  
+  if (!$use_array) {
+    $values['mutatieproces.eindopname'] = 'Onbekend';
+  } else {
+    foreach($contacts as $cid) {
+      $values[$cid]['mutatieproces.eindopname'] = 'Onbekend';
+    }
+  }
+  
+  $sql = "SELECT MIN(`a`.`activity_date_time`) AS `activity_date_time`, `cc`.`contact_id` AS `contact_id` FROM `civicrm_activity` `a` "
+      . "INNER JOIN `civicrm_case_activity` `ca` ON `a`.`id` = `ca`.`activity_id` "
+      . "INNER JOIN `civicrm_case_contact` `cc` ON `ca`.`case_id` = `cc`.`case_id`"
+      . "WHERE `a`.`activity_type_id` = '".$activity_type_id."' AND `a`.`status_id` = '1' AND `cc`.`contact_id` IN (".implode(",", $contacts).") AND `a`.`is_current_revision` = '1' GROUP BY `cc`.`contact_id`";
+
+  $dao = CRM_Core_DAO::executeQuery($sql);
+  while($dao->fetch()) {
+    $cid = $dao->contact_id;
+    if (in_array($cid, $contacts)) {
+        $date = new DateTime($dao->activity_date_time);
+        $days = array ('zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag');
+        $months = array('januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december');
+        $dateStr = $days[$date->format('w')];
+        $dateStr .= ' '.$date->format('j');
+        $dateStr .= ' '.$months[$date->format('n')-1];
+        $dateStr .= ' '.$date->format('Y');
+        
+        if (!$use_array) { 
+          $values['mutatieproces.eindopname'] = $dateStr;
+        } else {
+          $values[$cid]['mutatieproces.eindopname'] = $dateStr;
+        }
+      }
+    }  
+}
