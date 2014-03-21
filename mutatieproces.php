@@ -67,6 +67,7 @@ function mutatieproces_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * is installed, disabled, uninstalled.
  */
 function mutatieproces_civicrm_managed(&$entities) {
+  var_dump($entities); exit();
   return _mutatieproces_civix_civicrm_managed($entities);
 }
 
