@@ -175,45 +175,185 @@ function mutatieproces_civicrm_custom($op, $groupID, $entityID, &$params) {
       $hov_org_custom_table = $hov_org_custom_group['table_name'];
     }
   }
-
+  $nieuwVgeCustomGroup = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("nieuw_vge");
+  if (!civicrm_error($nieuwVgeCustomGroup)) {
+    if (isset($nieuwVgeCustomGroup['id'])) {
+      $nieuwVgeCustomGroupId = $nieuwVgeCustomGroup['id'];
+      $nieuwVgeCustomTable = $nieuwVgeCustomGroup['table_name'];
+    }
+  }
+  $nieuwWwCustomGroup = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomGroupByName("nieuw_woningwaardering");
+  if (!civicrm_error($nieuwWwCustomGroup)) {
+    if (isset($nieuwWwCustomGroup['id'])) {
+      $nieuwWwCustomGroupId = $nieuwWwCustomGroup['id'];
+      $nieuwWwCustomTable = $nieuwWwCustomGroup['table_name'];
+    }
+  }
+  
   /*
    * process only if required
    */
-  if ($groupID == $hov_hh_custom_group_id || $groupID == $hov_org_custom_group_id) {
-    if ($groupID == $hov_hh_custom_group_id) {
-      $hov_id_name = "HOV_nummer_First";
-      $hov_custom_table = $hov_hh_custom_table;
-      $type = "Huishouden";
-    } else {
-      $hov_id_name = "hov_nummer";
-      $hov_custom_table = $hov_org_custom_table;
-      $type = "Organisatie";
+  if ($groupID == $hov_hh_custom_group_id || $groupID == $hov_org_custom_group_id || $groupID == $nieuwVgeCustomGroupId) {
+      
+      
+    /*
+     * Custom Group vge bij Nieuwehuurdersdossier
+     */  
+    if ($groupID == $nieuwVgeCustomGroupId) {
+        if ($op == "create" || $op == "edit") {
+            $vgeNummerField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_nr', $groupID);
+            if (!civicrm_error($vgeNummerField)) {
+                $vgeNummerColumn = $vgeNummerField['column_name'];
+            }
+            $complexNummerField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_complex_nr', $groupID);
+            if (!civicrm_error($complexNummerField)) {
+                $complexNummerColumn = $complexNummerField['column_name'];
+            }
+            $vgeAdresField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_adres', $groupID);
+            if (!civicrm_error($vgeAdresField)) {
+                $vgeAdresColumn = $vgeAdresField['column_name'];
+            }
+            $vgeStraatField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_straat', $groupID);
+            if (!civicrm_error($vgeStraatField)) {
+                $vgeStraatColumn = $vgeStraatField['column_name'];
+            }
+            $vgeHuisNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_huis_nr', $groupID);
+            if (!civicrm_error($vgeHuisNrField)) {
+                $vgeHuisNrColumn = $vgeHuisNrField['column_name'];
+            }
+            $vgeSuffixField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_suffix', $groupID);
+            if (!civicrm_error($vgeSuffixField)) {
+                $vgeSuffixColumn = $vgeSuffixField['column_name'];
+            }
+            $vgePostcodeField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_postcode', $groupID);
+            if (!civicrm_error($vgePostcodeField)) {
+                $vgePostcodeColumn = $vgePostcodeField['column_name'];
+            }
+            $vgePlaatsField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_vge_plaats', $groupID);
+            if (!civicrm_error($vgePlaatsField)) {
+                $vgePlaatsColumn = $vgePlaatsField['column_name'];
+            }
+            $epaLabelField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_epa_label_opzegging', $nieuwWwCustomGroupId);
+            if (!civicrm_error($epaLabelField)) {
+                $epaLabelColumn = $epaLabelField['column_name'];
+            }
+            $epaPreField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_epa_pre_opzegging', $nieuwWwCustomGroupId);
+            if (!civicrm_error($epaPreField)) {
+                $epaPreColumn = $epaPreField['column_name'];
+            }
+            $oppervlakteField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName('nw_woningoppervlakte', $nieuwWwCustomGroupId);
+            if (!civicrm_error($oppervlakteField)) {
+                $oppervlakteColumn = $oppervlakteField['column_name'];
+            }
+            /*
+             * retrieve vge_id from existing record in custom table
+             */
+            $getVgeQuery = "SELECT $vgeNummerColumn FROM $nieuwVgeCustomTable WHERE entity_id = $entityID";
+            $daoNwVge = CRM_Core_DAO::executeQuery($getVgeQuery);
+            if ($daoNwVge->fetch()) {
+                /*
+                 * retrieve property data with vgeId
+                 */
+                $property = CRM_Mutatieproces_Property::getByVgeId($daoNwVge->$vgeNummerColumn);
+                if (!civicrm_error($property)) {
+                    $updateVgeFields = array();
+                    $addressParts = array();
+                    $cityParts = array();
+                    if (isset($property['complex_id']) && !empty($property['complex_id'])) {
+                        $updateVgeFields[] = "$complexNummerColumn = '{$property['complex_id']}'";
+                    }
+                    if (isset($property['vge_street_name']) && !empty($property['vge_street_name'])) {
+                        $updateVgeFields[] = "$vgeStraatColumn = '".CRM_Core_DAO::escapeString($property['vge_street_name'])."'";
+                        $addressParts[] = $property['vge_street_name'];
+                    }
+                    if (isset($property['vge_street_number']) && !empty($property['vge_street_number'])) {
+                        $updateVgeFields[] = "$vgeHuisNrColumn = '{$property['vge_street_number']}'";
+                        $addressParts[] = $property['vge_street_number'];
+                    }
+                    if (isset($property['vge_street_unit']) && !empty($property['vge_street_unit'])) {
+                        $updateVgeFields[] = "$vgeSuffixColumn = '".CRM_Core_DAO::escapeString($property['vge_street_unit'])."'";
+                        $addressParts[] = $property['vge_street_unit'];
+                    }
+                    if (isset($property['vge_postal_code']) && !empty($property['vge_postal_code'])) {
+                        if (!empty($addressParts)) {
+                            $cityParts[] = $property['vge_postal_code'];
+                        }
+                        $updateVgeFields[] = "$vgePostcodeColumn = '{$property['vge_postal_code']}'";
+                    }
+                    if (isset($property['vge_city']) && !empty($property['vge_city'])) {
+                        if (!empty($addressParts)) {
+                            $cityParts[] = $property['vge_city'];
+                        }
+                        $updateVgeFields[] = "$vgePlaatsColumn = '".CRM_Core_DAO::escapeString($property['vge_city'])."'";
+                    }
+                    if (!empty($addressParts)) {
+                        $vgeAdres = implode(" ", $addressParts);
+                        if (!empty($cityParts)) {
+                            $vgeAdres .= ", ".implode(" ", $cityParts);
+                        }
+                        $updateVgeFields[] = "$vgeAdresColumn = '".CRM_Core_DAO::escapeString($vgeAdres)."'";
+                    }
+                    if (!empty($updateVgeFields)) {
+                        $updVgeQuery = "UPDATE $nieuwVgeCustomTable SET ".implode(", ", $updateVgeFields)." WHERE entity_id = $entityID";
+                        CRM_Core_DAO::executeQuery($updVgeQuery);
+                    }
+                    $updateWwFields = array();
+                    if (isset($property['epa_label']) && !empty($property['epa_label'])) {
+                        $updateWwFields[] = "$epaLabelColumn = '{$property['epa_label']}'";
+                    }
+                    if (isset($property['epa_pre']) && !empty($property['epa_pre'])) {
+                        $updateWwFields[] = "$epaPreColumn = '{$property['epa_pre']}'";
+                    }
+                    if (isset($property['square_mtrs']) && !empty($property['square_mtrs'])) {
+                        $updateWwFields[] = "$oppervlakteColumn = '{$property['square_mtrs']}'";
+                    }
+                    if (!empty($updateWwFields)) {
+                        $updWwQuery = "UPDATE $nieuwWwCustomTable SET ".implode(", ", $updateWwFields)." WHERE entity_id = $entityID";
+                        CRM_Core_DAO::executeQuery($updWwQuery);
+                    }                    
+                }
+            }
+        }
+        
     }
-    $hov_id_custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName($hov_id_name, $groupID);
-    if (!civicrm_error($hov_id_custom_field)) {
-      $hov_custom_field = $hov_id_custom_field['column_name'];
-    }
-    $hov_query = 'SELECT ' . $hov_custom_field . " FROM " . $hov_custom_table . " WHERE entity_id = $entityID";
-    $dao_hov = CRM_Core_DAO::executeQuery($hov_query);
-    if ($dao_hov->fetch()) {
-      $contract_data = _mutatieproces_setPropertyContractParams($params, $type);
-      /*
-       * update or add property contract table if required
-       */
-      require_once 'CRM/Mutatieproces/PropertyContract.php';
-      $property_contract = new CRM_Mutatieproces_PropertyContract();
-      $contract_exists = $property_contract->checkHovIdExists($dao_hov->$hov_custom_field);
-      if ($contract_exists) {
-        $retrieved_contract = CRM_Mutatieproces_PropertyContract::getPropertyContractWithHovId($dao_hov->$hov_custom_field);
-        $contract_data['id'] = $retrieved_contract['id'];
-        $property_contract->update($contract_data);
-      } else {
-        $property_contract->create($contract_data);
-      }
+    /*
+     * Custom group huurovereenkomst with individual or organization
+     */
+    if ($groupID == $hov_hh_custom_group_id || $groupID == $hov_org_custom_group_id) {
+        if ($groupID == $hov_hh_custom_group_id) {
+          $hov_id_name = "HOV_nummer_First";
+          $hov_custom_table = $hov_hh_custom_table;
+          $type = "Huishouden";
+        } else {
+          $hov_id_name = "hov_nummer";
+          $hov_custom_table = $hov_org_custom_table;
+          $type = "Organisatie";
+        }
+        $hov_id_custom_field = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName($hov_id_name, $groupID);
+        if (!civicrm_error($hov_id_custom_field)) {
+          $hov_custom_field = $hov_id_custom_field['column_name'];
+        }
+        $hov_query = 'SELECT ' . $hov_custom_field . " FROM " . $hov_custom_table . " WHERE entity_id = $entityID";
+        $dao_hov = CRM_Core_DAO::executeQuery($hov_query);
+        if ($dao_hov->fetch()) {
+          $contract_data = _mutatieproces_setPropertyContractParams($params, $type);
+          /*
+           * update or add property contract table if required
+           */
+          require_once 'CRM/Mutatieproces/PropertyContract.php';
+          $property_contract = new CRM_Mutatieproces_PropertyContract();
+          $contract_exists = $property_contract->checkHovIdExists($dao_hov->$hov_custom_field);
+          if ($contract_exists) {
+            $retrieved_contract = CRM_Mutatieproces_PropertyContract::getPropertyContractWithHovId($dao_hov->$hov_custom_field);
+            $contract_data['id'] = $retrieved_contract['id'];
+            $property_contract->update($contract_data);
+          } else {
+            $property_contract->create($contract_data);
+          }
+        }
     }
   }
 }
-
 /**
  * Function to set the fields for PropertyContract based on incoming $params
  * 
