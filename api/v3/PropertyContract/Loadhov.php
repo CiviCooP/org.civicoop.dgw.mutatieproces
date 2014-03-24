@@ -11,8 +11,11 @@
  *   standard mailaddress (bestanden@degoedewoning.nl)
  * - ICT De Goede Woning puts all files send to mailadres on CiviCRM server in
  *   path /home/beheerder/first/
- * - API checks if file exists, reads and processes records and deletes file
- *   when processing is done
+ * - This API PropertyContract loads the csv file into import table dgw_loadhov
+ *   (scheduled daily)
+ * - API PropertyContract Createhov creates records in PropertyContract for 5000 
+ *   imported hov's and deletes processed records.
+ *   (scheduled hourly)
  * 
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 17 Mar 2014
@@ -23,11 +26,25 @@
  * @throws API_Exception when source file does not exist
  */
 function civicrm_api3_property_contract_loadhov($params) {
-    set_time_limit(0);
-    $countPropertyContracts = 0;
-    /*
-     * retrieve path from dgw_config table
-     */
+    if (!CRM_Core_DAO::checkTableExists('dgw_loadhov')) {
+        $createLoadTable = 
+        "CREATE TABLE `dgw_loadhov` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `persoon_nummer` varchar(25) DEFAULT NULL,
+          `vge_nummer` varchar(25) DEFAULT NULL,
+          `hov_nummer` varchar(25) DEFAULT NULL,
+          `hov_naam` varchar(128) DEFAULT NULL,
+          `start_datum` varchar(25) DEFAULT NULL,
+          `eind_datum` varchar(25) DEFAULT NULL,
+          `verwachte_eind_datum` varchar(25) DEFAULT NULL,
+          `mutatie_nummer` varchar(25) DEFAULT NULL,
+          PRIMARY KEY (`id`),
+          UNIQUE KEY `id_UNIQUE` (`id`)
+          ) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+        CRM_Core_DAO::executeQuery($createLoadTable);
+    } else {
+        CRM_Core_DAO::executeQuery("TRUNCATE TABLE dgw_loadhov");
+    }
     $sourceFile = CRM_Utils_DgwUtils::getDgwConfigValue("kov bestandsnaam")."contracthov.csv";
     if (!file_exists($sourceFile)) {
         throw new API_Exception("Bronbestand $sourceFile niet gevonden, laden HOV-gegevens mislukt");
@@ -35,40 +52,58 @@ function civicrm_api3_property_contract_loadhov($params) {
         /*
          * read all records from the source file, expecting csv format
          */
+        $hovCount = 0;
         $sf = fopen($sourceFile, "r");
         while (!feof($sf)) {
-            $sourceData = fgetcsv($sf, 0, ";");
-            $countPropertyContracts++;
-            $propertyContractHov = new CRM_Mutatieproces_PropertyContract();
-            /*
-             * set type to huurovereenkomst
-             */
-            $sourceData[14] = "h";
-            /*
-             * check if property exists, update if it does and
-             * create if it does not
-             */
-            $hovExists = $propertyContractHov->checkHovIdExists($sourceData[2]);
-            if ($hovExists == TRUE) {
-                $propertyContractHov->setIdWithHovId($sourceData[2]);
-                $propertyContractHov->update($sourceData);
-            } else {
-                $propertyContractHov->create($sourceData);
+            $sourceData = fgetcsv($sf, 0, ",");
+            $insertFields = setInsertFields($sourceData);
+            if (!empty($insertFields)) {
+                $insertQry = "INSERT INTO dgw_loadhov SET ".implode(", ", $insertFields);
+                CRM_Core_DAO::executeQuery($insertQry);
+                $hovCount++;
             }
-            /*
-             * update all custom fields with latest property values
-             */
-            $propertyContractHov->setHovLoadCustomData();
         }
         fclose($sf);
-        /*
-         * remove sourceFile
-         */
-        unlink($sourceFile);
-        $returnValues[] = "Laden HOV-gegevens succesvol afgerond";
-        $returnValues[] = $countPropertyContracts." huurovereenkomsten geladen in tabel civicrm_property_contract";
-        return civicrm_api3_create_success($returnValues, $params, 'PropertyContract', 'Loadhov');
+        $returnValues = array();
+        $returnValues[] = "Laden huurovereenkomsten succesvol afgerond";
+        $returnValues[] = $hovCount." huurovereenkomsten geladen";
     }
+    return civicrm_api3_create_success($returnValues, $params, 'PropertyContract', 'Loadeh');    
 }
-
-
+/**
+ * Function to set the insert fields
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 22 Mar 2014
+ * @param array $sourceData
+ * @return array $insertFields
+ * @access public
+ */
+function setInsertFields($sourceData) {
+    if (isset($sourceData[0])&& !empty($sourceData[0])) {
+        $insertFields[] = "persoon_nummer = '{$sourceData[0]}'";
+    }
+    if (isset($sourceData[1]) && !empty($sourceData[1])) {
+        $insertFields[] = "vge_nummer = '{$sourceData[1]}'";
+    }
+    if (isset($sourceData[2]) && !empty($sourceData[2])) {
+        $insertFields[] = "hov_nummer = '{$sourceData[2]}'";
+    }
+    if (isset($sourceData[7]) && !empty($sourceData[7])) {
+        $hovNaam = CRM_Core_DAO::escapeString($sourceData[7]);
+        $insertFields[] = "hov_naam = '$hovNaam'";
+    }
+    if (isset($sourceData[10]) && !empty($sourceData[10])) {
+        $insertFields[] = "start_datum = '{$sourceData[10]}'";
+    }
+    if (isset($sourceData[11]) && !empty($sourceData[11])) {
+        $insertFields[] = "eind_datum = '{$sourceData[11]}'";
+    }
+    if (isset($sourceData[12]) && !empty($sourceData[12])) {
+        $insertFields[] = "verwachte_eind_datum = '{$sourceData[12]}'";
+    }
+    if (isset($sourceData[13]) && !empty($sourceData[13])) {
+        $insertFields[] = "mutatie_nummer = '{$sourceData[13]}'";
+    }
+    return $insertFields;
+}

@@ -60,11 +60,37 @@ class CRM_Mutatieproces_PropertyContract {
      * @author Erik Hommel (erik.hommel@civicoop.org)
      * @date 20 Jan 2014
      * @param array $params
-     * @return integer $id (id of the created record)
+     * @return integer $newId (id of the created record)
+     * @throws Exception if $params is not an array
      * @access public
      */
     public function create($params) {
-        $insertFields = $this->_setPropertyContractFields($params);
+        /*
+         * error if params is not an array
+         */
+        if (!is_array($params)) {
+            throw new Exception("Params is not array in function PropertyContract->create");
+        }
+        $insertFields = array();
+        $numericFields = array();
+        $daoColumn = CRM_Core_DAO::executeQuery("SHOW FULL COLUMNS FROM ".$this->_table);
+        while ($daoColumn->fetch()) {
+            if (substr($daoColumn->Type, 0, 3) == "int") {
+                $numericFields[] = $daoColumn->Field;
+            }
+        }
+        foreach ($params as $key => $value) {
+            if (!empty($value)) {
+                if ($key == "hov_start_date" || $key == "hov_end_date") {
+                    $value = date("Ymd", strtotime($value));
+                }
+                if (in_array($key, $numericFields)) {
+                    $insertFields[] = $key." = ".$value;
+                } else {
+                    $insertFields[] = $key." = '".CRM_Core_DAO::escapeString($value). "'";
+                }
+            }
+        }
         /*
          * insert record if required
          */
@@ -72,6 +98,14 @@ class CRM_Mutatieproces_PropertyContract {
             $query = "INSERT INTO " . $this->_table . " SET " . implode(", ", $insertFields);
             CRM_Core_DAO::executeQuery($query);
         }
+        $latestQuery = "SELECT MAX(id) AS max_id FROM ".$this->_table;
+        $daoLatest = CRM_Core_DAO::executeQuery($latestQuery);
+        if ($daoLatest->fetch()) {
+            if (isset($daoLatest->max_id)) {
+                $this->id = $daoLatest->max_id;
+            }
+        }        
+        return $this->id;
     }
     /**
      * Function to update a record in civicrm_property_contract
@@ -82,7 +116,30 @@ class CRM_Mutatieproces_PropertyContract {
      * @access public
      */
     public function update($params) {
-        $updateFields = $this->_setPropertyContractFields($params);
+        /*
+         * error if params is not an array
+         */
+        if (!is_array($params)) {
+            throw new Exception("Params is not array in function PropertyContract->create");
+        }
+        $updateFields = array();
+        $numericFields = array();
+        $daoColumn = CRM_Core_DAO::executeQuery("SHOW FULL COLUMNS FROM ".$this->_table);
+        while ($daoColumn->fetch()) {
+            if (substr($daoColumn->Type, 0, 3) == "int") {
+                $numericFields[] = $daoColumn->Field;
+            }
+        }
+        foreach ($params as $key => $value) {
+            if ($key == "hov_start_date" || $key == "hov_end_date") {
+                $value = date("Ymd", strtotime($value));
+            }
+            if (in_array($key, $numericFields)) {
+                $updateFields[] = $key." = ".$value;
+            } else {
+                $updateFields[] = $key." = '".CRM_Core_DAO::escapeString($value). "'";
+            }
+        }
         /*
          * update record if required
          */
@@ -149,9 +206,9 @@ class CRM_Mutatieproces_PropertyContract {
      * @date 20 Jan 2014
      * @param integer $hovId
      * @return integer $hoofdHuurderId
-     * @access protected
+     * @access public
      */
-    protected function _getHoofdHuurderId($hovId) {
+    public function getHoofdHuurderId($hovId) {
         $hoofdHuurderId = 0;
         if (empty($hovId)) {
             return $hoofdHuurderId;
@@ -201,7 +258,6 @@ class CRM_Mutatieproces_PropertyContract {
                 $params = array(
                     'relationship_type_id' => $relationshipType['id'],
                     'contact_id_b' => $entityId,
-                    'is_active' => 1
                 );
                 $relationships = civicrm_api3('Relationship', 'Get', $params);
                 if (isset($relationships['values'])) {
@@ -220,9 +276,9 @@ class CRM_Mutatieproces_PropertyContract {
      * @date 20 Jan 2014
      * @param integer $hovId
      * @return integer $medeHuurderId
-     * @access protected
+     * @access public
      */
-    protected function _getMedeHuurderId($hovId) {
+    public function getMedeHuurderId($hovId) {
         $medeHuurderId = 0;
         if (empty($hovId)) {
             return $medeHuurderId;
@@ -268,11 +324,10 @@ class CRM_Mutatieproces_PropertyContract {
              * retrieve actieve relationship Medehuurder where 
              * contact_id_b = entity_id retrieved
              */
-            if ($entityId) {
+            if (isset($entityId) && !empty($entityId)) {
                 $params = array(
                     'relationship_type_id' => $relationshipType['id'],
                     'contact_id_b' => $entityId,
-                    'is_active' => 1
                 );
                 $relationships = civicrm_api3('Relationship', 'Get', $params);
                 if (isset($relationships['values'])) {
@@ -558,82 +613,5 @@ class CRM_Mutatieproces_PropertyContract {
             }
         }
        
-    }
-    /**
-     * function to set fields based on incoming params
-     * 
-     * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
-     * @date 18 Mar 2014
-     * 
-     * @param array $params expecting fields
-     * @return array $result with fields
-     * @access private
-     */
-    private function _setPropertyContractFields($params) {
-        $result = array();
-        
-        if (isset($params[1])) {
-            $this->vgeId = $params[1];
-            $result[] = "hov_vge_id = {$this->vgeId}";
-        }
-        
-        if (isset($params[2])) {
-            $this->hovId = $params[2];
-            $result[] = "hov_id = {$this->hovId}";
-        }
-        
-        if (isset($params[7])) {
-            $this->hovName = CRM_Core_DAO::escapeString($params[7]);
-            $result[] = "hov_name = '{$this->hovName}'";
-        }
-        
-        if (isset($params[10])) {
-            if (!empty($params[10])) {
-                $this->startDate = date("Ymd", strtotime($params[10]));
-                $result[] = "hov_start_date = '{$this->startDate}'";
-            }
-        }
-        
-        if (isset($params[11])) {
-            if (!empty($params[11])) {
-                $this->endDate = date("Ymd", strtotime($params[11]));
-                $result[] = "hov_end_date = '{$this->endDate}'";
-            }
-        }
-        
-        if (isset($params[12])) {
-            if (!empty($params[12])) {
-                $this->expectedEndDate = date("Ymd", strtotime($params[12]));
-                $result[] = "hov_expected_end_date = '{$this->expectedEndDate}'";
-            }
-        }
-        
-        if (isset($params[13])) {
-            if (!empty($params[13]) && is_numeric($params[13])) {
-                $this->mutatieId = $params[13];
-                $result[] = "hov_mutatie_id = {$this->mutatieId}";
-            }
-        }
-        
-        if (isset($params[14])) {
-            $this->type = CRM_Core_DAO::escapeString($params[14]);
-            $result[] = "type = '{$this->type}'";
-        }
-        
-        /*
-         * set hoofd- and medehuurder id based on active relationships
-         * hoofd- en medehuurder
-         */
-        if (!empty($this->hovId)) {
-            $this->hoofdHuurderId = $this->_getHoofdHuurderId($this->hovId);
-            if (!empty($this->hoofdHuurderId)) {
-                $result[] = "hov_hoofd_huurder_id = {$this->hoofdHuurderId}";
-            }
-            $this->medeHuurderId = $this->_getMedeHuurderId($this->hovId);
-            if (!empty($this->medeHuurderId)) {
-                $result[] = "hov_mede_huurder_id = {$this->medeHuurderId}";
-            }
-        }
-        return $result;
     }
 }
