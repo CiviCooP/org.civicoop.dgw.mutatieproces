@@ -131,7 +131,7 @@ class CRM_Mutatieproces_PropertyContract {
             }
         }
         foreach ($params as $key => $value) {
-            if ($key == "hov_start_date" || $key == "hov_end_date") {
+            if ($key == "hov_start_date" || $key == "hov_end_date" || $key == "hov_expected_end_date") {
                 $value = date("Ymd", strtotime($value));
             }
             if (in_array($key, $numericFields)) {

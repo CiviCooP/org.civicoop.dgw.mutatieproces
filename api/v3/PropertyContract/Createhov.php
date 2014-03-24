@@ -57,6 +57,9 @@ function civicrm_api3_property_contract_createhov($params) {
             if (isset($daoImport->eind_datum) && !empty($daoImport->eind_datum)) {
                 $hovParams['hov_end_date'] = $daoImport->eind_datum;
             }
+            if (isset($daoImport->verwachte_eind_datum) && !empty($daoImport->verwachte_eind_datum)) {
+                $hovParams['hov_expected_end_date'] = $daoImport->verwachte_eind_datum;
+            }
             if (isset($daoImport->mutatie_nummer) && !empty($daoImport->mutatie_nummer)) {
                 if (is_numeric($daoImport->mutatie_nummer)) {
                     $hovParams['hov_mutatie_id'] = $daoImport->mutatie_nummer;
