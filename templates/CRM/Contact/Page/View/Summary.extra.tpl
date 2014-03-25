@@ -25,5 +25,5 @@
 {literal}
     <script type="text/javascript">
     cj("#opzeggenHOV").appendTo("#actions");
-    </script></script>
+    </script>
 {/literal}
