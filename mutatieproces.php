@@ -432,87 +432,111 @@ function _mutatieproces_setPropertyContractParams($params, $type) {
  */
 function mutatieproces_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
     if ($formName == "CRM_Case_Form_Case") {
-        $contactId = $form->getVar('_currentlyViewedContactId');
-        /*
-         * validation for case type Nieuwehuurdersdossier
-         */
-        $nieuweHuurderTypeId = _mutatieproces_get_case_type_id("Nieuwehuurdersdossier");
-        if ($fields['case_type_id'] == $nieuweHuurderTypeId) {
-            /*
-             * only one active Nieuwehuurdersdossier at a time allowed
-             */
-            $casesContact = civicrm_api3('Case', 'Get', array('contact_id' => $contactId));
-            foreach ($casesContact['values'] as $caseId => $caseContact) {
-                if ($caseContact['is_deleted'] == 0 && $caseContact['case_type_id'] == $nieuweHuurderTypeId) {
-                    /*
-                     * retrieve case status for closed
-                     */
-                    $caseStatusGroupParams = array(
-                        'name'  =>  'case_status',
-                        'return'=>  'id'
-                    );
-                    try {
-                        $caseStatusGroupId = civicrm_api3('OptionGroup', 'Getvalue', $caseStatusGroupParams);
-                        $caseStatusFieldParams = array(
-                            'option_group_id'   =>  $caseStatusGroupId,
-                            'name'              =>  'closed',
-                            'return'            =>  'value'
-                        );
-                        try {
-                            $caseStatusClosedId = civicrm_api3('OptionValue', 'Getvalue', $caseStatusFieldParams);
-                            if ($caseContact['status_id'] != $caseStatusClosedId) {
-                                $errors['case_type_id'] = 'Er is al een open Nieuwehuurdersdossier voor dit contact, er kan slechts 1 open Nieuwehuurdersdossier zijn.';
-                            }
-                        } catch (CiviCRM_API3_Exception $e) {
-                            throw new Exception('Geen value gevonden in option group case_status met de name closed, melding van API OptionValue Getvalue : '.$e->getMessage());
-                        }
-                        
-                    } catch (CiviCRM_API3_Exception $e) {
-                        throw new Exception('Geen option group met name case_status gevonden, melding van API OptionGroup Getvalue : '.$e->getMessge());
-                    }
-                } 
-            }
-            /*
-             * build form field name of vge_id by retrieving custom_id and adding '-1'
-             */
-            $customGroupParams = array(
-                'name'  =>  'nieuw_vge',
+        $activityTypeId = $form->getVar('_activityTypeId');
+        if (!empty($activityTypeId)) {
+            $optionGroupParams = array(
+                'name'  =>  'activity_type',
                 'return'=>  'id'
             );
             try {
-                $customGroupId = civicrm_api3('CustomGroup', 'Getvalue', $customGroupParams);
-                $customFieldParams = array(
-                    'custom_group_id'   =>  $customGroupId,
-                    'name'              =>  'nw_vge_nr',
-                    'return'            =>  'id'
-                );
-                try {
-                    $customFieldId = civicrm_api3('CustomField', 'Getvalue', $customFieldParams);
-                    $vgeIdFieldName = "custom_".$customFieldId."_-1";
-                    /*
-                     * field can not be empty
-                     */
-                    if (empty($fields[$vgeIdFieldName])) {
-                        $errors[$vgeIdFieldName] = "VGE nummer mag niet leeg zijn.";
-                    } else {
-                        /*
-                         * has to be a valid property
-                         */
-                        $property = CRM_Mutatieproces_Property::getByVgeId($fields[$vgeIdFieldName]);
-                        if (civicrm_error($property)) {
-                            $errors[$vgeIdFieldName] = "VGE nummer ".$fields[$vgeIdFieldName]." niet gevonden in bestand met eenheden.";
-                        } else {
-                            if (isset($property['count']) && $property['count'] == 0) {
-                                $errors[$vgeIdFieldName] = "VGE nummer ".$fields[$vgeIdFieldName]." niet gevonden in bestand met eenheden.";                        
-                            } 
-                        }
-                    }
-
-                } catch (CiviCRM_API3_Exception $e) {
-                    throw new Exception(ts('Could not find custom field with name nw_vge_nr in custom group nieuw_vge, error from API CustomField Getvalue : '.$e->getMessage()));
-                }
+                $optionGroupId = civicrm_api3('OptionGroup', 'Getvalue', $optionGroupParams);
             } catch (CiviCRM_API3_Exception $e) {
-                throw new Exception(ts('Could not find custom group with name nieuw_vge, error from API CustomGroup Getvalue : '.$e->getMessage()));
+                throw new Exception("Could not find valid option group with name activity_type, message from API OptionGroup Getvalue : ".$e->getMessage());
+            }
+            $optionValueParams = array(
+                'option_group_id'   =>  $optionGroupId,
+                'value'             =>  $activityTypeId,
+                'return'            =>  'name'
+            );
+            try {
+                $activityType = civicrm_api3('OptionValue', 'Getvalue', $optionValueParams);
+            } catch (CiviCRM_API3_Exception $e) {
+                throw new Exception("Could not find a label for option value $activityTypeId in group activity_type, message from API OptionValue Getvalue : ".$e->getMessage);
+            }
+            if ($activityType == "Open Case") {
+                $contactId = $form->getVar('_currentlyViewedContactId');
+                /*
+                 * validation for case type Nieuwehuurdersdossier if activity = Open Case
+                 */
+                $nieuweHuurderTypeId = _mutatieproces_get_case_type_id("Nieuwehuurdersdossier");
+                if ($fields['case_type_id'] == $nieuweHuurderTypeId) {
+                    /*
+                     * only one active Nieuwehuurdersdossier at a time allowed
+                     */
+                    $casesContact = civicrm_api3('Case', 'Get', array('contact_id' => $contactId));
+                    foreach ($casesContact['values'] as $caseId => $caseContact) {
+                        if ($caseContact['is_deleted'] == 0 && $caseContact['case_type_id'] == $nieuweHuurderTypeId) {
+                            /*
+                             * retrieve case status for closed
+                             */
+                            $caseStatusGroupParams = array(
+                                'name'  =>  'case_status',
+                                'return'=>  'id'
+                            );
+                            try {
+                                $caseStatusGroupId = civicrm_api3('OptionGroup', 'Getvalue', $caseStatusGroupParams);
+                                $caseStatusFieldParams = array(
+                                    'option_group_id'   =>  $caseStatusGroupId,
+                                    'name'              =>  'closed',
+                                    'return'            =>  'value'
+                                );
+                                try {
+                                    $caseStatusClosedId = civicrm_api3('OptionValue', 'Getvalue', $caseStatusFieldParams);
+                                    if ($caseContact['status_id'] != $caseStatusClosedId) {
+                                        $errors['case_type_id'] = 'Er is al een open Nieuwehuurdersdossier voor dit contact, er kan slechts 1 open Nieuwehuurdersdossier zijn.';
+                                    }
+                                } catch (CiviCRM_API3_Exception $e) {
+                                    throw new Exception('Geen value gevonden in option group case_status met de name closed, melding van API OptionValue Getvalue : '.$e->getMessage());
+                                }
+
+                            } catch (CiviCRM_API3_Exception $e) {
+                                throw new Exception('Geen option group met name case_status gevonden, melding van API OptionGroup Getvalue : '.$e->getMessge());
+                            }
+                        } 
+                    }
+                    /*
+                     * build form field name of vge_id by retrieving custom_id and adding '-1'
+                     */
+                    $customGroupParams = array(
+                        'name'  =>  'nieuw_vge',
+                        'return'=>  'id'
+                    );
+                    try {
+                        $customGroupId = civicrm_api3('CustomGroup', 'Getvalue', $customGroupParams);
+                        $customFieldParams = array(
+                            'custom_group_id'   =>  $customGroupId,
+                            'name'              =>  'nw_vge_nr',
+                            'return'            =>  'id'
+                        );
+                        try {
+                            $customFieldId = civicrm_api3('CustomField', 'Getvalue', $customFieldParams);
+                            $vgeIdFieldName = "custom_".$customFieldId."_-1";
+                            /*
+                             * field can not be empty
+                             */
+                            if (empty($fields[$vgeIdFieldName])) {
+                                $errors[$vgeIdFieldName] = "VGE nummer mag niet leeg zijn.";
+                            } else {
+                                /*
+                                 * has to be a valid property
+                                 */
+                                $property = CRM_Mutatieproces_Property::getByVgeId($fields[$vgeIdFieldName]);
+                                if (civicrm_error($property)) {
+                                    $errors[$vgeIdFieldName] = "VGE nummer ".$fields[$vgeIdFieldName]." niet gevonden in bestand met eenheden.";
+                                } else {
+                                    if (isset($property['count']) && $property['count'] == 0) {
+                                        $errors[$vgeIdFieldName] = "VGE nummer ".$fields[$vgeIdFieldName]." niet gevonden in bestand met eenheden.";                        
+                                    } 
+                                }
+                            }
+
+                        } catch (CiviCRM_API3_Exception $e) {
+                            throw new Exception(ts('Could not find custom field with name nw_vge_nr in custom group nieuw_vge, error from API CustomField Getvalue : '.$e->getMessage()));
+                        }
+                    } catch (CiviCRM_API3_Exception $e) {
+                        throw new Exception(ts('Could not find custom group with name nieuw_vge, error from API CustomGroup Getvalue : '.$e->getMessage()));
+                    }
+                }
             }
         }
     }
