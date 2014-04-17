@@ -66,6 +66,14 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
             $this->addDefaultButtons($label, 'done');
         }
     }
+
+		function setDefaultValues() {
+			$today = new DateTime();
+			$today->modify('+1 month');
+			$values['verwachte_einddatum'] = $today->format('m/d/Y');
+			return $values;
+		}
+
     /**
      * function to get Property contracts for contact
      * 
