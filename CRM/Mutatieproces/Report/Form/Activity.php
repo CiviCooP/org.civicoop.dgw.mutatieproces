@@ -310,6 +310,12 @@ class CRM_Mutatieproces_Report_Form_Activity extends CRM_Report_Form {
     $this->_tagFilter = TRUE;
     parent::__construct();
   }
+  
+  function modifyColumnHeaders() {
+    // use this method to modify $this->_columnHeaders
+    //var_dump($this->_columnHeaders); exit();
+    unset($this->_columnHeaders['civicrm_activity_activity_date_time']['type']);
+  }
 
   function select() {
     $select = array();
@@ -629,7 +635,10 @@ class CRM_Mutatieproces_Report_Form_Activity extends CRM_Report_Form {
           $entryFound = TRUE;
         }
       }
-
+      
+      if (array_key_exists('civicrm_activity_activity_date_time', $row)) {
+        $rows[$rowNum]['civicrm_activity_activity_date_time'] = CRM_Utils_Date::customFormat($row['civicrm_activity_activity_date_time']);
+      }    
       $entryFound = $this->alterDisplayAddressFields($row, $rows, $rowNum, 'activity', 'List all activities for this ') ? TRUE : $entryFound;
 
       if (!$entryFound) {
