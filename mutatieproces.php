@@ -122,6 +122,41 @@ function mutatieproces_civicrm_buildForm($formName, &$form) {
       }
     }
   }
+  if ($formName == 'CRM_Case_Form_CaseView') {
+    $caseId = $form->getVar('_caseID');
+    $contactId = $form->getVar('_contactID');
+    $form->addElement('text', 'woonkeusId', ts('Inschrijfnummer Woonkeus'));
+    $defaults['woonkeusId'] = _mutatieproces_get_woonkeus_id($caseId, $contactId);
+    $form->setDefaults($defaults);
+  }
+}
+/**
+ * Function to retrieve the woonkeusID if contact is household
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 21 Aug 2014
+ * @param int $caseId
+ * @param int $contactId
+ * @return string $woonkeusId
+ * @access public
+ */
+function _mutatieproces_get_woonkeus_id($caseId, $contactId) {
+  $customGroupParams = array('name' => 'Woonkeus', 'return' => 'id');
+  try {
+    $customGroupId = civicrm_api3('CustomGroup', 'Getvalue', $customGroupParams);
+  } catch (CiviCRM_API3_Exception $ex) {
+    throw new Exception('Could not find a custom group with name Woonkeus, '
+      . 'error from API CustomGroup Getvalue: '.$ex->getMessage());
+  }
+  $customFieldParams = array('custom_group_id' => $customGroupId, 'name' => 'Inschrijfnummer_Woonkeus', 'return' => 'id');
+  try {
+    $customFieldId = civicrm_api3('CustomField', 'Getvalue', $customFieldParams);
+  } catch (CiviCRM_API3_Exception $ex) {
+    throw new Exception('Could not find a custom field with name Inschrijfnummer Woonkeus, '
+      . 'error from API CustomField Getvalue: '.$ex->getMessage());    
+  }
+  $woonkeusId = (string) civicrm_api3('Contact', 'Getvalue', array('id' => $contactId, 'return' => 'custom_'.$customFieldId));
+  return $woonkeusId;
 }
 
 function _mutatieproces_get_case_type_id($case) {
