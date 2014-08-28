@@ -69,8 +69,6 @@ class CRM_Utils_DgwMutatieprocesUtils {
             'onlyActiveFields' => '0',
         );
         $values = civicrm_api3('CustomValue', 'Get', $params);
-        CRM_Core_Error::debug('values na CustomValue Get', $values);
-        CRM_Core_Error::debug('params voor CustomValue Get', $params);
         if (isset($values['is_error']) && $values['is_error'] == '1') {
             return $values;
         }
@@ -81,13 +79,14 @@ class CRM_Utils_DgwMutatieprocesUtils {
                 'id' => $value['id'],
                 'custom_group_id' => $group_id
             );
-            CRM_Core_Error::debug('params voor CustomField Get', $params);
+          try {
             $fields = civicrm_api3('CustomField', 'Getsingle', $params);
-            if (!isset($fields['is_error'])) {
-                $return['values'][$i] = $value;
-                $return['values'][$i]['name'] = $fields['name'];
-                $i++;
-            }
+            $return['values'][$i] = $value;
+            $return['values'][$i]['name'] = $fields['name'];
+            $i++;
+          } catch (CiviCRM_API3_Exception $ex) {
+              
+          }
         }
         return $return;
     }
