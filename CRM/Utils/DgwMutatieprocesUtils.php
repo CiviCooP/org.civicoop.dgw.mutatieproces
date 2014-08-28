@@ -62,30 +62,26 @@ class CRM_Utils_DgwMutatieprocesUtils {
      * @return array
      */
     public static function retrieveCustomValuesForContactAndCustomGroup($contact_id, $group_id) {
-        $data['contact_id'] = $contact_id;
         $return['is_error'] = '0';
-        if (!isset($data['contact_id'])) {
-            $return['is_error'] = '1';
-            $return['error_message'] ='Invalid input parameters expected contact_id and contact_type';
-            return $return;
-        }
-
         $params = array(
             'sequential' => 1,
-            'entity_id' => $data['contact_id'],
+            'entity_id' => $contact_id,
             'onlyActiveFields' => '0',
         );
         $values = civicrm_api3('CustomValue', 'Get', $params);
+        CRM_Core_Error::debug('values na CustomValue Get', $values);
+        CRM_Core_Error::debug('params voor CustomValue Get', $params);
         if (isset($values['is_error']) && $values['is_error'] == '1') {
             return $values;
         }
-	$i = 0;
+        $i = 0;
         foreach($values['values'] as $value) {
             $params = array(
                 'sequential' => 1,
                 'id' => $value['id'],
                 'custom_group_id' => $group_id
             );
+            CRM_Core_Error::debug('params voor CustomField Get', $params);
             $fields = civicrm_api3('CustomField', 'Getsingle', $params);
             if (!isset($fields['is_error'])) {
                 $return['values'][$i] = $value;
