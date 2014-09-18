@@ -85,7 +85,6 @@ class CRM_Utils_DgwMutatieprocesUtils {
             $return['values'][$i]['name'] = $fields['name'];
             $i++;
           } catch (CiviCRM_API3_Exception $ex) {
-              
           }
         }
         return $return;
