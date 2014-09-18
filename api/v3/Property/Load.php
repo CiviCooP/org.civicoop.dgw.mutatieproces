@@ -32,12 +32,14 @@ function civicrm_api3_property_load($params) {
     if (!file_exists($sourceFile)) {
         throw new API_Exception("Bronbestand $sourceFile niet gevonden, laden VGE-gegevens mislukt");
     } else {
+      
         /*
          * read all records from the source file, expecting csv format
          */
+        $csvSeparator = _check_separator($sourceFile);
         $sf = fopen($sourceFile, "r");
         while (!feof($sf)) {
-            $sourceData = fgetcsv($sf, 0, ";");
+            $sourceData = fgetcsv($sf, 0, $csvSeparator);
             /*
              * ignore berging
              */
@@ -70,5 +72,29 @@ function civicrm_api3_property_load($params) {
         $returnValues[] = $countProperties." VGEs geladen in tabel civicrm_property";
         return civicrm_api3_create_success($returnValues, $params, 'Property', 'Load');
     }
+}
+/**
+ * Function to check which csv separator to use. Assumption is that
+ * separator is ';', if reading first record return record with only 
+ * 1 field, then ',' should be used
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 22 Apr 2014
+ */
+function _check_separator($sourceFile) {
+  $testSeparator = fopen($sourceFile, 'r');
+  /*
+   * first test if semi-colon or comma separated, based on assumption that
+   * it is semi-colon and it should be comma if I only get one record then
+   */
+  if ($testRow = fgetcsv($testSeparator, 0, ';')) {
+    if (!isset($testRow[1])) {
+      $csvSeparator = ",";
+    } else {
+      $csvSeparator = ";";
+    }
+  }
+  fclose($testSeparator);
+  return $csvSeparator;  
 }
 
