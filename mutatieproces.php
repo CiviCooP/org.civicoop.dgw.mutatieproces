@@ -540,7 +540,6 @@ function mutatieproces_civicrm_validateForm($formName, &$fields, &$files, &$form
                 }
             }
         }
-    }
     return;
 }
 /**
