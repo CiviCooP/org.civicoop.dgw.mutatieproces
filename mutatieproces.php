@@ -635,7 +635,7 @@ function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = 
   
   $act_type_group = civicrm_api3('OptionGroup', 'getsingle', array('name' => 'activity_type'));
   $gid = $act_type_group['id'];
-  $activity_type = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $gid, 'name' => 'eindgesprek_huuropzegging'));
+  $activity_type = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $gid, 'name' => 'adviesgesprek_huuropzegging'));
   $activity_type_id = $activity_type['value'];
   
   if (!$use_array) {
