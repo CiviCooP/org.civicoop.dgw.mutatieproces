@@ -419,7 +419,7 @@ class CRM_Mutatieproces_PropertyContract {
                     $nameFieldName = $nameField['column_name'];
                     $fields[] = $nameFieldName . " = '$name'";
                 }
-                $persoonsNr = CRM_DgwUtils::getPersoonsnummerFirst($hovData['hov_medehuurder_id']);
+                $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_medehuurder_id']);
                 $persoonsNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_nr_first", $customGroup['id']);
                 $persoonsNrFieldName = $persoonsNrField['column_name'];
                 $fields[] = $persoonsNrFieldName . " = $persoonsNr";
