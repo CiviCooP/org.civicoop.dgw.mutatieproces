@@ -378,4 +378,118 @@ class CRM_Utils_DgwMutatieprocesUtils {
         }
         return $opzeggen;
     }
+    
+    /**
+   * Function to retrieve the VGE id for a case
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 14 May 2014
+   * @param int $caseId
+   * @return result $vgeData
+   * @access public
+   * @static
+   */
+  static public function getContactVgeData($clientId) {
+    if (empty($clientId) || !is_numeric(($clientId))) {
+      return array();
+    }
+    
+    if (self::checkHuishouden($clientId) == FALSE) {
+      $huishoudenId = self::getHuishouden($clientId);
+    } else {
+      $huishoudenId = $clientId;
+    }
+    $vgeData = self::getHuishoudenVgeData($huishoudenId);
+    return $vgeData;
+  }
+  
+  /**
+   * Function to check if incoming contact_id is household
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 14 May 2014
+   * @param int $contactId
+   * @return boolean
+   * @access public
+   * @static
+   */
+  static public function checkHuishouden($contactId) {
+    $params = array('id' => $contactId, 'return' => 'contact_type');
+    try {
+      $contactType = civicrm_api3('Contact', 'Getvalue', $params);
+    } catch (CiviCRM_API3_Exception $ex) {
+      return FALSE;
+    }
+    if ($contactType == 'Household') {
+      return TRUE;
+    } else {
+      return FALSE;
+    }
+  }
+  
+  static private function getHuishoudenId($contactId, $type) {
+    $MutatieprocesConfig = CRM_Mutatieproces_Config::singleton();
+    $query = 'SELECT contact_id_b FROM civicrm_relationship WHERE relationship_type_id = %1 AND contact_id_a = %2 ORDER BY end_date DESC';
+    if ($type == 'hoofdhuurder') {
+    $params = array(
+      1 => array($MutatieprocesConfig->hoofdhuurderRelationshipTypeId, 'Integer'),
+      2 => array($contactId, 'Integer')
+      );
+    }
+    if ($type == 'medehuurder') {
+    $params = array(
+      1 => array($MutatieprocesConfig->medehuurderRelationshipTypeId, 'Integer'),
+      2 => array($contactId, 'Integer')
+      );
+    }
+    $dao = CRM_Core_DAO::executeQuery($query, $params);
+    if ($dao->fetch()) {
+      return $dao->contact_id_b;
+    } else {
+      return 0;
+    }
+  }
+  
+  /**
+   * Public static function to retrieve huishoudenID that belongs to a contact
+   * First check if contact has relationship Hoofdhuurder and if so, retrieve
+   * huishouden.
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 14 May 2014
+   * @param int $contactId
+   * @return int $huishoudenId
+   * @access public
+   * @static
+   */
+  public static function getHuishouden($contactId) {
+    $huishoudenId = NULL;
+    if (CRM_Utils_DgwUtils::checkContactHoofdhuurder($contactId) == TRUE) {
+      $huishoudenId = self::getHuishoudenId($contactId, 'hoofdhuurder');
+      return $huishoudenId;
+    }
+    if (CRM_Utils_DgwUtils::checkContactMedehuurder($contactId) == TRUE) {
+      $huishoudenId = self::getHuishoudenId($contactId, 'medehuurder');
+      return $huishoudenId;
+    }
+    return $huishoudenId;
+  }
+  
+   
+  /**
+   * Function to get vge_data from huurovereenkomst for huishouden
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 14 May 2014
+   * @param int $huishoudenId
+   * @return array $vgeData
+   * @access public
+   * @static
+   * 
+   * @todo Decide on and include some processing if no active vge found?
+   */
+  public static function getHuishoudenVgeData($huishoudenId) {
+    $huurOvereenkomsten = CRM_Utils_DgwUtils::getVgeHuurovereenkomst($huishoudenId);
+    return array_shift($huurOvereenkomsten);
+  }
 }

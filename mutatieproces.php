@@ -554,6 +554,10 @@ function mutatieproces_civicrm_tokens(&$tokens) {
   $tokens['mutatieproces'] = array (
     'mutatieproces.eindopname' => 'Datum eindopname (indien bekend)',
   );
+  
+  $tokens['mutatieproces'] = array (
+    'mutatieproces.vge' => 'VGE adres (indien bekend)',
+  );
 }
 
 /**
@@ -574,6 +578,14 @@ function mutatieproces_civicrm_tokenValues(&$values, $cids, $job = null, $tokens
     }
   } elseif (is_array($tokens) && count($tokens) == 0) {
     mutatieproces_token_eindopname($values, $cids, $job, $tokens, $context);
+  }
+  
+  if (!empty($tokens['mutatieproces'])) {
+    if (in_array('vge', $tokens['mutatieproces'])) {
+       mutatieproces_token_vge($values, $cids, $job, $tokens, $context);
+    }
+  } elseif (is_array($tokens) && count($tokens) == 0) {
+    mutatieproces_token_vge($values, $cids, $job, $tokens, $context);
   }
 }
 
@@ -601,7 +613,7 @@ function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = 
   
   $act_type_group = civicrm_api3('OptionGroup', 'getsingle', array('name' => 'activity_type'));
   $gid = $act_type_group['id'];
-  $activity_type = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $gid, 'name' => 'adviesgesprek_huuropzegging'));
+  $activity_type = civicrm_api3('OptionValue', 'getsingle', array('option_group_id' => $gid, 'name' => 'eindgesprek_huuropzegging'));
   $activity_type_id = $activity_type['value'];
   
   if (!$use_array) {
@@ -636,4 +648,46 @@ function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = 
         }
       }
     }  
+}
+
+/**
+ * implementation of hook: mutatieproces.vge
+ * 
+ * This function deletegates the tokens to the desired functions
+ * 
+ * @param type $values
+ * @param type $cids
+ * @param type $job
+ * @param type $tokens
+ * @param type $context
+ */
+function mutatieproces_token_vge(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+  $contacts = $cids;
+  $use_array = true;
+  if (!is_array($contacts) && !empty($cids)) {
+    $contacts = array($cids);
+    $use_array = false;
+  }
+  
+  if (count($contacts) == 0) {
+    return;
+  }
+    
+  if (!$use_array) {
+    $values['mutatieproces.vge'] = 'Onbekend';
+  } else {
+    foreach($contacts as $cid) {
+      $values[$cid]['mutatieproces.vge'] = 'Onbekend';
+    }
+  }
+    
+  foreach($contacts as $cid) {
+    $caseVgeData = CRM_Utils_DgwMutatieprocesUtils::getContactVgeData($cid);
+      
+    if (!$use_array) { 
+      $values['mutatieproces.vge'] = $caseVgeData['vge_adres_first_7'];
+    } else {
+      $values[$cid]['mutatieproces.vge'] = $caseVgeData['vge_adres_first_7'];
+    }
+  }
 }
