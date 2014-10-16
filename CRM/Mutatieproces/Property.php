@@ -401,7 +401,7 @@ class CRM_Mutatieproces_Property {
                     case "vge_huis_nr":
                         $fieldValue = $this->vgeStreetNumber;
                         break;
-                    case "vge_suffix":
+                    case "vge_street_unit":
                         $fieldValue = CRM_Core_DAO::escapeString($this->vgeStreetUnit);
                         break;
                     case "vge_adres":
