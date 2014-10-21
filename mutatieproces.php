@@ -627,7 +627,7 @@ function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = 
   $sql = "SELECT MIN(`a`.`activity_date_time`) AS `activity_date_time`, `cc`.`contact_id` AS `contact_id` FROM `civicrm_activity` `a` "
       . "INNER JOIN `civicrm_case_activity` `ca` ON `a`.`id` = `ca`.`activity_id` "
       . "INNER JOIN `civicrm_case_contact` `cc` ON `ca`.`case_id` = `cc`.`case_id`"
-      . "WHERE `a`.`activity_type_id` = '".$activity_type_id."' AND `a`.`status_id` = '2' AND `cc`.`contact_id` IN (".implode(",", $contacts).") AND `a`.`is_current_revision` = '1' GROUP BY `cc`.`contact_id`";
+      . "WHERE `a`.`activity_type_id` = '".$activity_type_id."' AND `a`.`status_id` = '1' AND `cc`.`contact_id` IN (".implode(",", $contacts).") AND `a`.`is_current_revision` = '1' GROUP BY `cc`.`contact_id`";
 
   $dao = CRM_Core_DAO::executeQuery($sql);
   while($dao->fetch()) {
