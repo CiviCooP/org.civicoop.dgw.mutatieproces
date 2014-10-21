@@ -49,7 +49,7 @@ class CRM_Mutatieproces_Config {
    */
   public static function &singleton() {
     if (self::$_singleton === NULL) {
-      self::$_singleton = new CRM_Mbreports_Config();
+      self::$_singleton = new CRM_Mutatieproces_Config();
     }
     return self::$_singleton;
   }
