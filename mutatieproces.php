@@ -640,6 +640,7 @@ function mutatieproces_token_eindopname(&$values, $cids, $job = null, $tokens = 
         $dateStr .= ' '.$date->format('j');
         $dateStr .= ' '.$months[$date->format('n')-1];
         $dateStr .= ' '.$date->format('Y');
+        $dateStr .= ' '.$date->format('H:i');
         
         if (!$use_array) { 
           $values['mutatieproces.eindopname'] = $dateStr;
