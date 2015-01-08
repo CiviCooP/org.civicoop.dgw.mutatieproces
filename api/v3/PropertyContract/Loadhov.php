@@ -46,14 +46,16 @@ function civicrm_api3_property_contract_loadhov($params) {
         CRM_Core_DAO::executeQuery("TRUNCATE TABLE dgw_loadhov");
     }
     $sourceFile = CRM_Utils_DgwUtils::getDgwConfigValue("kov bestandsnaam")."contracthov.csv";
+
     if (!file_exists($sourceFile)) {
         throw new API_Exception("Bronbestand $sourceFile niet gevonden, laden HOV-gegevens mislukt");
     } else {
+        $csvSeparator = _check_separator($sourceFile);
         /*
          * read all records from the source file, expecting csv format
          */
         $hovCount = 0;
-        $sf = fopen($sourceFile, "r");
+        $sf = fopen($sourceFile, "r", $csvSeparator);
         while (!feof($sf)) {
             $sourceData = fgetcsv($sf, 0, ",");
             $insertFields = setInsertFields($sourceData);
@@ -106,4 +108,28 @@ function setInsertFields($sourceData) {
         $insertFields[] = "mutatie_nummer = '{$sourceData[13]}'";
     }
     return $insertFields;
+}
+/**
+ * Function to check which csv separator to use. Assumption is that
+ * separator is ';', if reading first record return record with only 
+ * 1 field, then ',' should be used
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 22 Apr 2014
+ */
+function _check_separator($sourceFile) {
+  $testSeparator = fopen($sourceFile, 'r');
+  /*
+   * first test if semi-colon or comma separated, based on assumption that
+   * it is semi-colon and it should be comma if I only get one record then
+   */
+  if ($testRow = fgetcsv($testSeparator, 0, ';')) {
+    if (!isset($testRow[1])) {
+      $csvSeparator = ",";
+    } else {
+      $csvSeparator = ";";
+    }
+  }
+  fclose($testSeparator);
+  return $csvSeparator;  
 }

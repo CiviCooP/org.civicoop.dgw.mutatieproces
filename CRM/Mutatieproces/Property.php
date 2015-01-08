@@ -267,7 +267,7 @@ class CRM_Mutatieproces_Property {
         if (empty($vgeType)) {
             return FALSE;
         }
-        $query = "SELECT id FROM ".$this->_type_table." WHERE label = '$vgeType'";
+        $query = "SELECT id FROM ".$this->_typeTable." WHERE label = '$vgeType'";
         $dao = CRM_Core_DAO::executeQuery($query);
         if ($dao->fetch()) {
             $this->vgeTypeId = $dao->id;
@@ -401,7 +401,7 @@ class CRM_Mutatieproces_Property {
                     case "vge_huis_nr":
                         $fieldValue = $this->vgeStreetNumber;
                         break;
-                    case "vge_suffix":
+                    case "vge_street_unit":
                         $fieldValue = CRM_Core_DAO::escapeString($this->vgeStreetUnit);
                         break;
                     case "vge_adres":
