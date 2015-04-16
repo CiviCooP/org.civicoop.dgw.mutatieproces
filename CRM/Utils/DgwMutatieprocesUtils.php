@@ -374,7 +374,12 @@ class CRM_Utils_DgwMutatieprocesUtils {
                 }
                 break;
             case "Organization":
-                break;
+              if (CRM_Mutatieproces_MutOrg::hasActiveHov($contact_id) == TRUE) {
+                $opzeggen = TRUE;
+              } else {
+                $opzeggen = FALSE;
+              }
+            break;
         }
         return $opzeggen;
     }

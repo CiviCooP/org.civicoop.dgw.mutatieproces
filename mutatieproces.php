@@ -91,7 +91,7 @@ function mutatieproces_civicrm_pageRun(&$page) {
      */
     $huur_opzeggen = CRM_Utils_DgwMutatieprocesUtils::checkHovOpzeggen($contact_id, $contact_type);
     /*
-     * Detemerine if the user has the role for testing huurovereenkomst opzeggen
+     * Determine if the user has the role for testing huurovereenkomst opzeggen
      */
     $access = false;
     if (user_access('huuropzeggen')) {
@@ -134,9 +134,11 @@ function mutatieproces_civicrm_buildForm($formName, &$form) {
  * 
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 21 Aug 2014
+ *
  * @param int $caseId
  * @param int $contactId
  * @return string $woonkeusId
+ * @throws Exception when error from API
  * @access public
  */
 function _mutatieproces_get_woonkeus_id($caseId, $contactId) {
@@ -180,7 +182,7 @@ function _mutatieproces_get_case_type_id($case) {
 /**
  * Implementation of hook civicrm_custom 
  * If record is changed or created in custom group
- * huuirovereenkomst(huishouden) or huurovereenkomst (organisatie)\
+ * huurovereenkomst(huishouden) or huurovereenkomst (organisatie)\
  * then updated or add to table PropertyContract
  * 
  * @param string $op

@@ -346,12 +346,15 @@ class CRM_Mutatieproces_PropertyContract {
      * @date 27 Jan 2014
      * @param int $hovId
      * @param int $caseId
-     * @param date $expectedEndDate
+     * @param string $expectedEndDate
      * @return void
      * @access public
      * @static
      */
     public static function setHovFieldsCase($hovId, $caseId, $expectedEndDate) {
+      CRM_Core_Error::debug('hovId', $hovId);
+      CRM_Core_Error::debug('caseId', $caseId);
+      CRM_Core_Error::debug('end', $expectedEndDate);
         /*
          * end if hov_id, case_id empty or non-numeric
          */
@@ -375,20 +378,22 @@ class CRM_Mutatieproces_PropertyContract {
             $action = "INSERT INTO";
           } else {
             $action = "UPDATE";
-            
           }
         }
         /*
          * retrieve hov_data
          */
+        $queryFields = array();
         $hovData = self::getPropertyContractWithHovId($hovId);
         if (!empty($hovData)) {
+          CRM_Core_Error::debug('hovData', $hovData);
             if (isset($hovData['hov_start_date'])) {
                 $startDate = CRM_Utils_DgwUtils::convertDMJString(date("d-m-Y", strtotime($hovData['hov_start_date'])));
                 $startDateField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hov_start_datum", $customGroup['id']);
                 $startDateFieldName = $startDateField['column_name'];
-                $fields[] = $startDateFieldName . " = '$startDate'";
+                $queryFields[] = $startDateFieldName . " = '$startDate'";
             }
+
             if (isset($hovData['hov_hoofd_huurder_id'])) {
                 $params = array(
                     'contact_id' => $hovData['hov_hoofd_huurder_id'],
@@ -399,13 +404,13 @@ class CRM_Mutatieproces_PropertyContract {
                     $name = CRM_Core_DAO::escapeString($name);
                     $nameField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_name", $customGroup['id']);
                     $nameFieldName = $nameField['column_name'];
-                    $fields[] = $nameFieldName . " = '$name'";
+                    $queryFields[] = $nameFieldName . " = '$name'";
                 }
                 require_once 'CRM/Utils/DgwUtils.php';
                 $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_hoofd_huurder_id']);
                 $persoonsNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("hoofdhuurder_nr_first", $customGroup['id']);
                 $persoonsNrFieldName = $persoonsNrField['column_name'];
-                $fields[] = $persoonsNrFieldName . " = $persoonsNr";
+                $queryFields[] = $persoonsNrFieldName . " = $persoonsNr";
             }
             if (isset($hovData['hov_mede_huurder_id']) && !empty($hovData['hov_mede_huurder_id'])) {
                 $params = array(
@@ -417,30 +422,32 @@ class CRM_Mutatieproces_PropertyContract {
                     $name = CRM_Core_DAO::escapeString($name);
                     $nameField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_name", $customGroup['id']);
                     $nameFieldName = $nameField['column_name'];
-                    $fields[] = $nameFieldName . " = '$name'";
+                    $queryFields[] = $nameFieldName . " = '$name'";
                 }
-                $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_medehuurder_id']);
+                $persoonsNr = CRM_Utils_DgwUtils::getPersoonsnummerFirst($hovData['hov_mede_huurder_id']);
                 $persoonsNrField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("medehuurder_nr_first", $customGroup['id']);
                 $persoonsNrFieldName = $persoonsNrField['column_name'];
-                $fields[] = $persoonsNrFieldName . " = $persoonsNr";
+                $queryFields[] = $persoonsNrFieldName . " = $persoonsNr";
             }
             if (isset($expectedEndDate) && !empty($expectedEndDate)) {
                 $expectedEndDate = CRM_Utils_DgwUtils::convertDMJString(date("d-m-Y", strtotime($expectedEndDate)));
                 $expectedEndDateField = CRM_Utils_DgwMutatieprocesUtils::retrieveCustomFieldByName("verwachte_eind_datum", $customGroup['id']);
                 $expectedEndDateFieldName = $expectedEndDateField['column_name'];
-                $fields[] = $expectedEndDateFieldName . " = '$expectedEndDate'";
+                $queryFields[] = $expectedEndDateFieldName . " = '$expectedEndDate'";
             }
         }
-        $actionQuery = $action." $customTable SET ".implode(", ", $fields);
+      if (!empty($queryFields)) {
+        $actionQuery = $action . " $customTable SET " . implode(", ", $queryFields);
         if ($action == "UPDATE") {
           $actionQuery .= " WHERE entity_id = $caseId";
         } elseif ($action == "INSERT INTO") {
-           if (count($fields)) {
+          if (count($queryFields)) {
             $actionQuery .= ",";
           }
           $actionQuery .= " entity_id = $caseId, $hovIdFieldName = $hovId";
         }
         CRM_Core_DAO::executeQuery($actionQuery);
+      }
     }
     /**
      * Function to update custom records when loading property contract
