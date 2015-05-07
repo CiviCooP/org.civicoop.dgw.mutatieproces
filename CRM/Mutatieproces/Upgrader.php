@@ -54,6 +54,8 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     $gid = $this->add_custom_group('info_afd_verhuur', 'Info tbv afdeling verhuur', $extends_entity_ids, 'Case', false);
     if ($gid) {
       $this->add_custom_field($gid, 'huuropzeg_rapport', 'Opm. vanuit advies- of eindgesprek', 'Memo', 'TextArea', 1, 1);
+      $this->add_custom_field($gid, 'future_address_in_first', 'Toekomstig adres in First', 'Memo', 'TextArea', 1, 1);
+      $this->add_custom_field($gid, 'future_address', 'Toekomstig adres', 'Memo', 'TextArea', 1, 1);
     }
   }
 
@@ -458,7 +460,7 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
      * @author Erik Hommel (CiviCooP)<erik.hommel@civicoop.org>
      * @date 17 Mar 2014
      */
-   public function upgrade_1001() {
+   /*public function upgrade_1001() {
        $this->ctx->log->info('Applying update 1001');
        if (CRM_Core_DAO::checkTableExists('civicrm_property')) {
            if (CRM_Core_DAO::checkFieldExists('civicrm_property', 'build_year')) {
@@ -471,13 +473,13 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
            }
        }
        return TRUE;
-   }
+   }*/
     /**
      * Update 1002
      * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
      * @date 17 Mar 2014
      */
-   public function upgrade_1002() {
+   /*public function upgrade_1002() {
        $this->ctx->log->info('Applying update 1002');
        if (CRM_Core_DAO::checkTableExists('civicrm_property_contract')) {
            if (CRM_Core_DAO::checkFieldExists('civicrm_property_contract', 'hov_corr_name')) {
@@ -488,16 +490,27 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
            }
        }
        return TRUE;
-   }
+   }*/
    
    /**
     * Update 1003
     * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
     * @date 18 Mar 2014
     */
-   public function upgrade_1003() {
+   /*public function upgrade_1003() {
      $this->ctx->log->info('Applying update 1003: installing activity for woning waardering');
      $this->installInfoAfdVerhuur();
      return TRUE;
-   }
+   }*/
+
+  /**
+   * Update 1004: toevoegen velden toekomstig adres
+   * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+   * @date 18 Mar 2014
+   */
+  public function upgrade_1004() {
+    $this->ctx->log->info('Applying update 1014: installing future address fields');
+    $this->installInfoAfdVerhuur();
+    return TRUE;
+  }
 }

@@ -191,6 +191,7 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
           if (isset($createdCase['id'])) {
             CRM_Mutatieproces_Property::setVgeFieldsCase($hovData['vge_nummer'], $createdCase['id']);
             CRM_Mutatieproces_PropertyContract::setHovFieldsCase($hovId, $createdCase['id'], $expectedEndDate);
+            $this->updateFutureAddress($createdCase['id'], $this->_contactIds[0]);
             $urlString = 'civicrm/contact/view/case';
             $urlParams = "reset=1&id=".$createdCase['id']."&cid=".$this->_contactIds[0]."&action=view";
           }
@@ -219,6 +220,7 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
                  */
                 CRM_Mutatieproces_Property::setVgeFieldsCase($vgeNr, $result['id']);
                 CRM_Mutatieproces_PropertyContract::setHovFieldsCase($hovNr, $result['id'], $expectedEndDate);
+                $this->updateFutureAddress($result['id'], $cid);
                 $urlString = 'civicrm/contact/view/case';
                 $urlParams = "reset=1&id=".$result['id']."&cid=".$cid."&action=view";
               }
@@ -229,5 +231,40 @@ class CRM_Contact_Form_Task_HOVOpzeggen extends CRM_Contact_Form_Task {
     }
     $session = CRM_Core_Session::singleton();
     $session->replaceUserContext(CRM_Utils_System::url($urlString, $urlParams));
+  }
+
+  /**
+   * Update the field Future Address in First with future address data
+   *
+   * @param $case_id
+   * @param $contact_id
+   * @throws \CiviCRM_API3_Exception
+   */
+  protected function updateFutureAddress($case_id, $contact_id) {
+    $toekomst = civicrm_api3('LocationType', 'getvalue', array('name' => 'Toekomst', 'return' => 'id'));
+    try {
+      $address = civicrm_api3('Address', 'getsingle', array('location_type_id' => $toekomst, 'contact_id' => $contact_id));
+    } catch (Exception $e) {
+      return;
+    }
+
+    $future_address = $address['street_address']."\r\n".$address['postal_code']." ".$address['city'];
+    $future_address = trim($future_address);
+
+    $customGroup = civicrm_api3('CustomGroup', 'getsingle', array('name' => 'info_afd_verhuur'));
+    $customField = civicrm_api3('CustomField', 'getsingle', array('name' => 'future_address_in_first', 'custom_group_id' => $customGroup['id']));
+
+    $id = CRM_Core_DAO::singleValueQuery("SELECT `id` FROM `".$customGroup['table_name']."` WHERE `entity_id` = %1", array(1=>array($case_id, 'Integer')));
+    if ($id) {
+      $sql = "UPDATE `".$customGroup['table_name']."` SET `".$customField['column_name']."`  = %1 WHERE `id` = %1";
+      $params[1] = array($future_address, 'String');
+      $params[2] = array($id, 'Integer');
+      CRM_Core_DAO::executeQuery($sql, $params);
+    } else {
+      $sql = "INSERT INTO `".$customGroup['table_name']."` (`entity_id`, `".$customField['column_name']."`) VALUES (%1, %2)";
+      $params[1] = array($case_id, 'Integer');
+      $params[2] = array($future_address, 'String');
+      CRM_Core_DAO::executeQuery($sql, $params);
+    }
   }
 }
