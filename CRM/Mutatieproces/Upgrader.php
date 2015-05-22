@@ -54,8 +54,8 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
     $gid = $this->add_custom_group('info_afd_verhuur', 'Info tbv afdeling verhuur', $extends_entity_ids, 'Case', false);
     if ($gid) {
       $this->add_custom_field($gid, 'huuropzeg_rapport', 'Opm. vanuit advies- of eindgesprek', 'Memo', 'TextArea', 1, 1);
-      $this->add_custom_field($gid, 'future_address_in_first', 'Toekomstig adres in First', 'Memo', 'TextArea', 1, 1);
-      $this->add_custom_field($gid, 'future_address', 'Toekomstig adres', 'Memo', 'TextArea', 1, 1);
+      $this->add_custom_field($gid, 'future_address_in_first', 'Toekomstig adres (bij opzegging)', 'Memo', 'TextArea', 1, 1);
+      $this->add_custom_field($gid, 'future_address', 'Toekomstig adres (tijdens inspectie)', 'Memo', 'TextArea', 1, 1);
     }
   }
 
@@ -194,11 +194,12 @@ class CRM_Mutatieproces_Upgrader extends CRM_Mutatieproces_Upgrader_Base {
    * @param string $label
    * @param string $description
    * @param bool $caseActivity - optional, default true, when set this activity type is used for case activities
+   * @return int|false activity type id on success, false on failure
    * 
    * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
    * @date 17 Mar 2014
    */
-  protected function add_activity_type($name, $label, $description, $caseActivity=true) {
+  protected function add_activity_type($name, $label, $description='', $caseActivity=true) {
     $option_group = 2; //activity type
     $componentCase = 7; //activity type for civi case
     $param = array(
