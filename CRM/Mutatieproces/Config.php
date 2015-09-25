@@ -17,6 +17,12 @@ class CRM_Mutatieproces_Config {
   static private $_singleton = NULL;
     
   public $hoofdhuurderRelationshipTypeId = NULL;
+  /**
+   * BOSW1509263 insite - vooropname mail aanhef
+   * $medehuurderRelationshipTypeId is called in mutatieproces.php in
+   * the function mutatieproces_civicrm_tokenValues, but did not exists
+   */
+  public $medehuurderRelationshipTypeId = NULL;
     
   /*
    * array with case types that are available for M&B reporting
@@ -32,6 +38,7 @@ class CRM_Mutatieproces_Config {
    */
   function __construct() {
     $this->setHoofdhuurderRelationshipTypeId();
+    $this->setMedehuurderRelationshipTypeId();
     
     $this->vooropname_activity_type = CRM_Core_OptionGroup::getValue('activity_type',
       'adviesgesprek_huuropzegging',
@@ -53,6 +60,22 @@ class CRM_Mutatieproces_Config {
       $this->hoofdhuurderRelationshipTypeId = civicrm_api3('RelationshipType', 'Getvalue', $params);
     } catch (CiviCRM_API3_Exception $ex) {
       $this->hoofdhuurderRelationshipTypeId = 0;
+    }
+  }
+  
+  /**
+   * BOSW1509263 insite - vooropname mail aanhef
+   * $medehuurderRelationshipTypeId is called in mutatieproces.php in
+   * the function mutatieproces_civicrm_tokenValues, but did not exists
+   */
+  private function setMedehuurderRelationshipTypeId() {
+    $params = array(
+      'name_a_b'  =>  'Medehuurder',
+      'return'    =>  'id');
+    try {
+      $this->medehuurderRelationshipTypeId = civicrm_api3('RelationshipType', 'Getvalue', $params);
+    } catch (CiviCRM_API3_Exception $ex) {
+      $this->medehuurderRelationshipTypeId = 0;
     }
   }
   
